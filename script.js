@@ -3,9 +3,9 @@ let db = null;
 let auth = null;
 let isFirebaseConnected = false;
 
-// Configuração do Firebase com credenciais reais
+// Configuração do Firebase atualizada com a nova API Key
 const firebaseConfig = {
-    apiKey: "AIzaSyAMIo-e1IQVvoVNvHfjyCvQ3mpmA8XpEZU",
+    apiKey: "AIzaSyAh08u5nObwe2ITXW1SmS1njgZdjez63mc",
     authDomain: "ricpower-finance-4312b.firebaseapp.com",
     databaseURL: "https://ricpower-finance-4312b-default-rtdb.firebaseio.com",
     projectId: "ricpower-finance-4312b",
@@ -69,6 +69,7 @@ function realizarLogin(e) {
                 }
             })
             .catch((error) => {
+                console.error("Erro na autenticação Firebase:", error.code, error.message);
                 btnSubmit.disabled = false;
                 btnSubmit.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar no Sistema';
                 alertBox.className = 'login-alert error';
