@@ -92,3 +92,54 @@ function realizarLogin(e) {
         btnSubmit.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar no Sistema';
     }
 }
+
+// --- CONTROLE DE NAVEGAÇÃO E NAVEGAÇÃO MÓVEL ---
+
+// Função chamada pelos cliques nas abas/links do menu
+function trocarAba(nomeAba, elemento) {
+    // Esconde todas as seções/abas do sistema
+    const abas = document.querySelectorAll('.tab-content, section, .page-section');
+    abas.forEach(aba => {
+        aba.style.display = 'none';
+        aba.classList.remove('active');
+    });
+
+    // Remove destaque de todos os itens do menu
+    const itensMenu = document.querySelectorAll('.nav-item, .menu-item, .sidebar a, .nav-link');
+    itensMenu.forEach(item => item.classList.remove('active'));
+
+    // Exibe a aba alvo
+    const abaAlvo = document.getElementById(nomeAba);
+    if (abaAlvo) {
+        abaAlvo.style.display = 'block';
+        abaAlvo.classList.add('active');
+    }
+
+    // Marca o botão clicado como ativo
+    if (elemento && elemento.classList) {
+        elemento.classList.add('active');
+    }
+
+    // Fecha o menu hambúrguer no mobile após a seleção
+    const sidebar = document.querySelector('.sidebar') || document.getElementById('sidebar');
+    if (sidebar && window.innerWidth <= 768) {
+        sidebar.classList.remove('active', 'open', 'show');
+    }
+}
+
+// Função para abrir/fechar o menu mobile (Hambúrguer)
+function toggleSidebar() {
+    const sidebar = document.querySelector('.sidebar') || document.getElementById('sidebar');
+    const overlay = document.querySelector('.sidebar-overlay') || document.getElementById('overlay');
+
+    if (sidebar) {
+        sidebar.classList.toggle('active');
+        sidebar.classList.toggle('open');
+        sidebar.classList.toggle('show');
+    }
+
+    if (overlay) {
+        overlay.classList.toggle('active');
+        overlay.classList.toggle('show');
+    }
+}
