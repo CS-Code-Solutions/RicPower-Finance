@@ -1,55 +1,41 @@
-/* AUTENTICAÇÃO REAL NO FIREBASE */
-function realizarLogin(e) {
-    if (e) e.preventDefault();
-    const email = document.getElementById('loginEmail').value.trim();
-    const senha = document.getElementById('loginSenha').value.trim();
-    const alertBox = document.getElementById('loginAlert');
-    const btnSubmit = document.getElementById('btnLoginSubmit');
+// --- VARIÁVEIS DE ESTADO E FIREBASE ---
+let db = null;
+let auth = null;
+let isFirebaseConnected = false;
 
-    alertBox.style.display = 'none';
-    btnSubmit.disabled = true;
-    btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Autenticando...';
+// --- CONFIGURAÇÃO DO FIREBASE ---
+const firebaseConfig = {
+    apiKey: "SUA_API_KEY",
+    authDomain: "ricpower-finance-4312b.firebaseapp.com",
+    projectId: "ricpower-finance-4312b",
+    storageBucket: "ricpower-finance-4312b.appspot.com",
+    messagingSenderId: "SEU_SENDER_ID",
+    appId: "SEU_APP_ID"
+};
 
-    if (isFirebaseConnected && auth) {
-        auth.signInWithEmailAndPassword(email, senha)
-            .then((userCredential) => {
-                alertBox.style.display = 'none';
-                btnSubmit.disabled = false;
-                btnSubmit.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar no Sistema';
-            })
-            .catch((error) => {
-                btnSubmit.disabled = false;
-                btnSubmit.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar no Sistema';
-                alertBox.className = 'login-alert error';
-                
-                // Exibe a mensagem de erro exata vinda do Firebase ou traduz os principais
-                let msg = error.message;
-                if (error.code === 'auth/user-not-found' || error.code === 'auth/wrong-password' || error.code === 'auth/invalid-credential') {
-                    msg = 'E-mail ou senha incorretos!';
-                } else if (error.code === 'auth/invalid-email') {
-                    msg = 'E-mail em formato inválido!';
-                } else if (error.code === 'auth/operation-not-allowed') {
-                    msg = 'O login por E-mail/Senha não está ativado no Firebase Console!';
-                } else if (error.code === 'auth/unauthorized-domain') {
-                    msg = 'O domínio cs-code-solutions.github.io não está autorizado no Firebase!';
-                }
-                
-                alertBox.innerText = msg;
-                alertBox.style.display = 'block';
-            });
+// Inicialização segura do Firebase
+try {
+    if (typeof firebase !== 'undefined') {
+        firebase.initializeApp(firebaseConfig);
+        db = firebase.firestore();
+        auth = firebase.auth();
+        isFirebaseConnected = true;
+        console.log("Firebase conectado com sucesso!");
     } else {
-        // Fallback local caso o Firebase não conecte
-        if (email === 'richard@ricpower.com' && senha === 'rpmel301') {
-            localStorage.setItem('ric_logged', 'true');
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('userEmailDisplay').innerText = email;
-            carregarDadosLocais();
-        } else {
-            alertBox.className = 'login-alert error';
-            alertBox.innerText = 'E-mail ou senha incorretos (Modo Local)!';
-            alertBox.style.display = 'block';
-        }
-        btnSubmit.disabled = false;
-        btnSubmit.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar no Sistema';
+        console.warn("SDKs do Firebase não encontrados. Operando em modo offline.");
     }
+} catch (e) {
+    console.error("Erro ao inicializar Firebase:", e);
+    isFirebaseConnected = false;
+}
+
+// Mantém sessão ativa se já estiver logado
+if (auth) {
+    auth.onAuthStateChanged((user) => {
+        if (user) {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('userEmailDisplay').innerText = user.email;
+            if (typeof carregarDados === 'function') carregarDados();
+        }
+    });
 }
