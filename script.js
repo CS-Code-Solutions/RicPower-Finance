@@ -3,7 +3,7 @@ let db = null;
 let auth = null;
 let isFirebaseConnected = false;
 
-// Configuração do Firebase atualizada com a nova API Key
+// Configuração atualizada do Firebase com a tua nova API Key válida
 const firebaseConfig = {
     apiKey: "AIzaSyAh08u5nObwe2ITXW1SmS1njgZdjez63mc",
     authDomain: "ricpower-finance-4312b.firebaseapp.com",
@@ -16,7 +16,9 @@ const firebaseConfig = {
 
 try {
     if (typeof firebase !== 'undefined') {
-        firebase.initializeApp(firebaseConfig);
+        if (!firebase.apps.length) {
+            firebase.initializeApp(firebaseConfig);
+        }
         db = firebase.firestore();
         auth = firebase.auth();
         isFirebaseConnected = true;
@@ -26,14 +28,17 @@ try {
     isFirebaseConnected = false;
 }
 
-// Oculta login automaticamente se já estiver autenticado
+// Escuta alteração de login
 if (auth) {
     auth.onAuthStateChanged((user) => {
         if (user) {
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('userEmailDisplay').innerText = user.email;
-            
-            // Garante exibição da aba padrão pós-login
+            const loginScreen = document.getElementById('login-screen');
+            if (loginScreen) loginScreen.style.display = 'none';
+
+            const emailDisplay = document.getElementById('userEmailDisplay');
+            if (emailDisplay) emailDisplay.innerText = user.email;
+
+            // Ativa a aba inicial padrão
             trocarAba('dashboard');
 
             try {
@@ -45,7 +50,7 @@ if (auth) {
     });
 }
 
-// FUNÇÃO DE LOGIN COMPLETA E CORRIGIDA
+// FUNÇÃO DE LOGIN COMPLETA
 function realizarLogin(e) {
     if (e) e.preventDefault();
     const email = document.getElementById('loginEmail').value.trim();
@@ -53,18 +58,22 @@ function realizarLogin(e) {
     const alertBox = document.getElementById('loginAlert');
     const btnSubmit = document.getElementById('btnLoginSubmit');
 
-    alertBox.style.display = 'none';
-    btnSubmit.disabled = true;
-    btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Entrando...';
+    if (alertBox) alertBox.style.display = 'none';
+    if (btnSubmit) {
+        btnSubmit.disabled = true;
+        btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Entrando...';
+    }
 
     if (isFirebaseConnected && auth) {
         auth.signInWithEmailAndPassword(email, senha)
             .then((userCredential) => {
-                // Sucesso: Oculta a tela de login e atualiza e-mail na sidebar
-                document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('userEmailDisplay').innerText = userCredential.user.email;
-                btnSubmit.disabled = false;
-                btnSubmit.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar no Sistema';
+                const loginScreen = document.getElementById('login-screen');
+                if (loginScreen) loginScreen.style.display = 'none';
+
+                if (btnSubmit) {
+                    btnSubmit.disabled = false;
+                    btnSubmit.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar no Sistema';
+                }
 
                 trocarAba('dashboard');
 
@@ -76,96 +85,100 @@ function realizarLogin(e) {
             })
             .catch((error) => {
                 console.error("Erro na autenticação Firebase:", error.code, error.message);
-                btnSubmit.disabled = false;
-                btnSubmit.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar no Sistema';
-                alertBox.className = 'login-alert error';
-                alertBox.innerText = 'E-mail ou senha incorretos!';
-                alertBox.style.display = 'block';
+                if (btnSubmit) {
+                    btnSubmit.disabled = false;
+                    btnSubmit.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar no Sistema';
+                }
+                if (alertBox) {
+                    alertBox.className = 'login-alert error';
+                    alertBox.innerText = 'E-mail ou senha incorretos!';
+                    alertBox.style.display = 'block';
+                } else {
+                    alert('E-mail ou senha incorretos!');
+                }
             });
     } else {
-        // Fallback para login local offline
-        if (email === 'richard@ricpower.com' && senha === 'rpmel301') {
+        // Modo fallback offline
+        if ((email === 'admin@richard.com' && senha === 'admin123') || (email === 'richard@ricpower.com' && senha === 'rpmel301')) {
             localStorage.setItem('ric_logged', 'true');
-            document.getElementById('login-screen').style.display = 'none';
-            document.getElementById('userEmailDisplay').innerText = email;
-            
+            const loginScreen = document.getElementById('login-screen');
+            if (loginScreen) loginScreen.style.display = 'none';
+
             trocarAba('dashboard');
 
             if (typeof carregarDados === 'function') carregarDados();
         } else {
-            alertBox.className = 'login-alert error';
-            alertBox.innerText = 'Credenciais inválidas (Modo Local)!';
-            alertBox.style.display = 'block';
+            if (alertBox) {
+                alertBox.className = 'login-alert error';
+                alertBox.innerText = 'Credenciais inválidas!';
+                alertBox.style.display = 'block';
+            } else {
+                alert('Credenciais inválidas!');
+            }
         }
-        btnSubmit.disabled = false;
-        btnSubmit.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar no Sistema';
+        if (btnSubmit) {
+            btnSubmit.disabled = false;
+            btnSubmit.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar no Sistema';
+        }
     }
 }
 
-// --- CONTROLE DE NAVEGAÇÃO E NAVEGAÇÃO MÓVEL ---
-
+// --- CONTROLE DE TROCA DE ABAS (CORRIGIDO PARA COMPATIBILIDADE DE IDS) ---
 function trocarAba(nomeAba, elemento) {
     if (!nomeAba) return;
 
-    // 1. Seleciona apenas os blocos de nível principal para ocultar
-    const abasPrincipais = document.querySelectorAll('main > section, .tab-content, .page-section');
-    abasPrincipais.forEach(aba => {
-        aba.style.display = 'none';
+    // 1. Oculta todas as abas no DOM
+    const abas = document.querySelectorAll('.tab-content');
+    abas.forEach(aba => {
         aba.classList.remove('active');
+        aba.style.display = 'none';
     });
 
-    // 2. Localiza a seção alvo pelo ID ou por atributo de navegação
-    let abaAlvo = document.getElementById(nomeAba);
-    if (!abaAlvo) {
-        abaAlvo = document.querySelector(`main section[data-tab="${nomeAba}"]`) || document.querySelector('main > section');
-    }
+    // 2. Busca pelo ID com prefixo 'tab-' (ex: 'tab-dashboard') ou pelo ID puro
+    let abaAlvo = document.getElementById(`tab-${nomeAba}`) || document.getElementById(nomeAba);
 
-    // 3. Restaura o container principal e seus elementos filhos
     if (abaAlvo) {
-        abaAlvo.style.display = 'block';
         abaAlvo.classList.add('active');
-
-        // Garante que os elementos internos permaneçam visíveis
-        const elementosInternos = abaAlvo.querySelectorAll('section, div, .card, .grid');
-        elementosInternos.forEach(el => {
-            if (el.style.display === 'none') {
-                el.style.display = '';
-            }
-        });
+        abaAlvo.style.display = 'block';
+    } else {
+        // Fallback caso receba o ID bruto
+        const primeiraAba = document.querySelector('.tab-content');
+        if (primeiraAba) {
+            primeiraAba.classList.add('active');
+            primeiraAba.style.display = 'block';
+        }
     }
 
-    // 4. Atualiza destaque nos botões do menu
-    const itensMenu = document.querySelectorAll('.nav-item, .menu-item, .sidebar a, .nav-link');
-    itensMenu.forEach(item => item.classList.remove('active'));
+    // 3. Destaca o item do menu lateral clicado
+    const navLinks = document.querySelectorAll('.nav-link, .sidebar a');
+    navLinks.forEach(link => link.classList.remove('active'));
 
     if (elemento && elemento.classList) {
         elemento.classList.add('active');
     }
 
-    // 5. Oculta menu móvel após seleção
-    const sidebar = document.querySelector('.sidebar') || document.getElementById('sidebar');
+    // 4. Se for mobile, recolhe a barra lateral
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.querySelector('.sidebar-overlay');
     if (sidebar && window.innerWidth <= 768) {
-        sidebar.classList.remove('active', 'open', 'show');
+        sidebar.classList.remove('active');
+        if (overlay) overlay.classList.remove('active');
     }
 }
 
+// --- CONTROLE DE MENU MOBILE ---
 function toggleSidebar() {
-    const sidebar = document.querySelector('.sidebar') || document.getElementById('sidebar');
-    const overlay = document.querySelector('.sidebar-overlay') || document.getElementById('overlay');
+    const sidebar = document.getElementById('sidebar');
+    const overlay = document.querySelector('.sidebar-overlay');
 
-    if (sidebar) {
-        sidebar.classList.toggle('active');
-        sidebar.classList.toggle('open');
-    }
-    if (overlay) {
-        overlay.classList.toggle('active');
-    }
+    if (sidebar) sidebar.classList.toggle('active');
+    if (overlay) overlay.classList.toggle('active');
 }
 
-// Garante inicialização visual caso o DOM já esteja pronto
+// Garante que ao carregar a página a tela esteja pronta
 document.addEventListener('DOMContentLoaded', () => {
-    const primeiraAba = document.querySelector('main > section, .tab-content');
-    if (primeiraAba) {
-        primeiraAba.style.display = 'block';
+    const abaAtiva = document.querySelector('.tab-content.active') || document.getElementById('tab-dashboard');
+    if (abaAtiva) {
+        abaAtiva.style.display = 'block';
     }
 });
