@@ -3,14 +3,15 @@ let db = null;
 let auth = null;
 let isFirebaseConnected = false;
 
-// Configuração do Firebase
+// Configuração do Firebase com credenciais reais
 const firebaseConfig = {
-    apiKey: "SUA_API_KEY",
+    apiKey: "AIzaSyAMIo-e1IQVvoVNvHfjyCvQ3mpmA8XpEZU",
     authDomain: "ricpower-finance-4312b.firebaseapp.com",
+    databaseURL: "https://ricpower-finance-4312b-default-rtdb.firebaseio.com",
     projectId: "ricpower-finance-4312b",
-    storageBucket: "ricpower-finance-4312b.appspot.com",
-    messagingSenderId: "SEU_SENDER_ID",
-    appId: "SEU_APP_ID"
+    storageBucket: "ricpower-finance-4312b.firebasestorage.app",
+    messagingSenderId: "632169254200",
+    appId: "1:632169254200:web:776e49224d4f61bc2e05cd"
 };
 
 try {
