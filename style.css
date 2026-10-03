@@ -341,7 +341,7 @@ th { background-color: #fafafa; color: #7f8c8d; font-weight: 600; text-transform
 .status-badge.atrasado { background-color: #f8d7da; color: #721c24; }
 .badge-fixa { background-color: #e8f4f8; color: #2980b9; padding: 2px 6px; border-radius: 4px; font-size: 10px; font-weight: bold; margin-left: 5px; }
 
-/* BOTÕES */
+/* BOTÕES GERAIS */
 .btn { padding: 8px 14px; border: none; border-radius: 6px; cursor: pointer; font-size: 12px; font-weight: bold; display: inline-flex; align-items: center; gap: 6px; transition: 0.2s; text-decoration: none; }
 .btn-success { background-color: var(--success-color); color: white; }
 .btn-danger { background-color: var(--danger-color); color: white; }
@@ -350,9 +350,33 @@ th { background-color: #fafafa; color: #7f8c8d; font-weight: 600; text-transform
 .btn-warning { background-color: var(--warning-color); color: white; }
 .btn-excel { background-color: #107c41; color: white; }
 .btn-excel:hover { background-color: #0b5c30; }
-.btn-sm { padding: 5px 10px; font-size: 11px; }
 
-.action-btns { display: flex; gap: 5px; flex-wrap: wrap; }
+/* --- AJUSTE EXCLUSIVO DOS BOTÕES COMPACTOS DA TABELA (.btn-sm) --- */
+.btn-sm { 
+    padding: 4px 8px !important; 
+    font-size: 11px !important; 
+    line-height: 1.2 !important;
+    border-radius: 4px !important;
+}
+
+.btn-sm i {
+    font-size: 11px !important;
+    margin: 0 !important;
+}
+
+td .btn {
+    margin: 1px 2px !important;
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+}
+
+td:last-child {
+    white-space: nowrap !important;
+    width: 1% !important;
+}
+
+.action-btns { display: flex; gap: 4px; flex-wrap: nowrap; align-items: center; }
 
 /* FORMULÁRIOS & MODAIS */
 .modal { display: none; position: fixed; z-index: 2000; left: 0; top: 0; width: 100vw; height: 100vh; background-color: rgba(0,0,0,0.7); align-items: center; justify-content: center; padding: 15px; }
