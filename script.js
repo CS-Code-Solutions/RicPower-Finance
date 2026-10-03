@@ -475,7 +475,38 @@ function renderGraficos(realIn, realOut, catPessoal = 0, catAdmin = 0, catPecas 
     }
 }
 
-// IMPORTAÇÃO EXCEL
+// --- FUNÇÃO AUXILIAR DE MAPEAMENTO DE CAMPOS MULTI-MODELO ---
+function extrairValorPorSinonimos(row, sinonimos) {
+    if (!row) return undefined;
+    const keys = Object.keys(row);
+    for (let s of sinonimos) {
+        const keyEncontrada = keys.find(k => k.toString().trim().toUpperCase() === s.toUpperCase());
+        if (keyEncontrada && row[keyEncontrada] !== undefined && row[keyEncontrada] !== null) {
+            return row[keyEncontrada];
+        }
+    }
+    return undefined;
+}
+
+// --- ENCONTRAR A LINHA DO CABEÇALHO AUTOMATICAMENTE ---
+function encontrarLinhaCabecalho(sheet) {
+    const rawMatrix = XLSX.utils.sheet_to_json(sheet, { header: 1 });
+    const palavrasChave = ['FORNECEDOR', 'CLIENTE', 'VALOR', 'VENCIMENTO', 'DATA', 'STATUS', 'DESCRIÇÃO', 'DESCRICAO', 'EMPRESA', 'PAGADOR'];
+    
+    for (let r = 0; r < Math.min(rawMatrix.length, 15); r++) {
+        const row = rawMatrix[r];
+        if (Array.isArray(row)) {
+            const strRow = row.join(' ').toUpperCase();
+            const matches = palavrasChave.filter(kw => strRow.includes(kw));
+            if (matches.length >= 2) {
+                return r; // Retorna a linha onde o cabeçalho foi identificado
+            }
+        }
+    }
+    return 0; // Fallback caso não encontre
+}
+
+// --- IMPORTAÇÃO EXCEL MULTI-MODELO COM DETECÇÃO AUTOMÁTICA ---
 function importarPlanilhaExcel(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -492,75 +523,118 @@ function importarPlanilhaExcel(e) {
             let countPagar = 0;
             let countReceber = 0;
 
-            const sheetPagarName = workbook.SheetNames.find(s => s.toUpperCase().includes('PAGAR') || s.toUpperCase().includes('SAIDA'));
+            // Dicionários de sinônimos para os campos principais
+            const sinFornecedor = ['FORNECEDOR', 'EMPRESA', 'RECEBEDOR', 'NOME', 'FORNECEDORA', 'RAZÃO SOCIAL', 'RAZAO SOCIAL'];
+            const sinCliente = ['CLIENTE', 'PAGADOR', 'NOME', 'CLIENTA', 'RAZÃO SOCIAL', 'RAZAO SOCIAL'];
+            const sinValor = ['VALOR A PAGAR', 'VALOR A RECEBER', 'VALOR', 'VALOR TOTAL', 'MONTANTE', 'VLR'];
+            const sinVenc = ['DATA DE VENCIMENTO', 'VENCIMENTO', 'DATA VENC', 'VENC', 'DATA DE VENC', 'DATA VENCIMENTO'];
+            const sinDesc = ['DESCRIÇÃO', 'DESCRICAO', 'DESC', 'OBSERVAÇÃO', 'OBSERVACAO', 'HISTÓRICO', 'HISTORICO'];
+            const sinStatus = ['STATUS', 'SITUAÇÃO', 'SITUACAO', 'ESTADO', 'PAGO?'];
+            const sinCC = ['CENTRO DE CUSTO', 'CATEGORIA', 'CC', 'CENTRO CUSTO', 'C. CUSTO'];
+
+            // 1. Processar Contas a Pagar
+            const sheetPagarName = workbook.SheetNames.find(s => 
+                s.toUpperCase().includes('PAGAR') || s.toUpperCase().includes('SAIDA') || s.toUpperCase().includes('SAÍDA')
+            );
+            
             if (sheetPagarName) {
                 const sheetPagar = workbook.Sheets[sheetPagarName];
-                let rows = XLSX.utils.sheet_to_json(sheetPagar);
+                const linhaCabecalho = encontrarLinhaCabecalho(sheetPagar);
+                let rows = XLSX.utils.sheet_to_json(sheetPagar, { range: linhaCabecalho });
 
-                if (limitValue !== 'ALL') rows = rows.slice(-parseInt(limitValue, 10));
+                if (limitValue !== 'ALL') {
+                    const lim = parseInt(limitValue, 10);
+                    rows = rows.slice(-lim);
+                }
 
                 rows.forEach(row => {
-                    const fornecedor = row.Fornecedor || row.Empresa || row.Nome || row.Recebedor || 'Fornecedor Importado';
-                    let valor = row.Valor;
-                    if (typeof valor === 'string') valor = parseFloat(valor.replace('R$', '').replace(/\./g, '').replace(',', '.').trim());
+                    const fornecedor = extrairValorPorSinonimos(row, sinFornecedor) || 'Fornecedor Importado';
+                    let valor = extrairValorPorSinonimos(row, sinValor);
+
+                    if (typeof valor === 'string') {
+                        valor = parseFloat(valor.replace('R$', '').replace(/\./g, '').replace(',', '.').trim());
+                    }
                     valor = parseFloat(valor) || 0;
 
                     if (valor > 0) {
                         const newId = 'imp_p_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+                        const statusLido = String(extrairValorPorSinonimos(row, sinStatus) || 'PENDENTE').toUpperCase();
+                        
                         const itemData = {
-                            fornecedor: fornecedor,
-                            desc: row.Descrição || row.Descricao || row.Desc || 'Importado via Excel',
+                            fornecedor: String(fornecedor),
+                            desc: String(extrairValorPorSinonimos(row, sinDesc) || 'Importado via Excel'),
                             valor: valor,
-                            venc: row.Vencimento || row.Venc || new Date().toISOString().split('T')[0],
-                            status: (row.Status || 'PENDENTE').toUpperCase().includes('PAG') ? 'PAGO' : 'PENDENTE',
-                            cc: row.Categoria || row.CentroCusto || row.CC || 'ADMINISTRATIVO',
+                            venc: extrairValorPorSinonimos(row, sinVenc) || new Date().toISOString().split('T')[0],
+                            status: statusLido.includes('PAG') ? 'PAGO' : 'PENDENTE',
+                            cc: String(extrairValorPorSinonimos(row, sinCC) || 'ADMINISTRATIVO'),
                             fixa: false
                         };
 
-                        if (isFirebaseConnected && db) db.collection("pagar").doc(newId).set(itemData);
-                        else dbPagar.push({ id: newId, ...itemData });
+                        if (typeof isFirebaseConnected !== 'undefined' && isFirebaseConnected && db) {
+                            db.collection("pagar").doc(newId).set(itemData);
+                        } else if (typeof dbPagar !== 'undefined') {
+                            dbPagar.push({ id: newId, ...itemData });
+                        }
                         countPagar++;
                     }
                 });
             }
 
-            const sheetReceberName = workbook.SheetNames.find(s => s.toUpperCase().includes('RECEBER') || s.toUpperCase().includes('ENTRADA'));
+            // 2. Processar Contas a Receber
+            const sheetReceberName = workbook.SheetNames.find(s => 
+                s.toUpperCase().includes('RECEBER') || s.toUpperCase().includes('ENTRADA')
+            );
+
             if (sheetReceberName) {
                 const sheetReceber = workbook.Sheets[sheetReceberName];
-                let rows = XLSX.utils.sheet_to_json(sheetReceber);
+                const linhaCabecalho = encontrarLinhaCabecalho(sheetReceber);
+                let rows = XLSX.utils.sheet_to_json(sheetReceber, { range: linhaCabecalho });
 
-                if (limitValue !== 'ALL') rows = rows.slice(-parseInt(limitValue, 10));
+                if (limitValue !== 'ALL') {
+                    const lim = parseInt(limitValue, 10);
+                    rows = rows.slice(-lim);
+                }
 
                 rows.forEach(row => {
-                    const cliente = row.Cliente || row.Nome || row.Pagador || 'Cliente Importado';
-                    let valor = row.Valor;
-                    if (typeof valor === 'string') valor = parseFloat(valor.replace('R$', '').replace(/\./g, '').replace(',', '.').trim());
+                    const cliente = extrairValorPorSinonimos(row, sinCliente) || 'Cliente Importado';
+                    let valor = extrairValorPorSinonimos(row, sinValor);
+
+                    if (typeof valor === 'string') {
+                        valor = parseFloat(valor.replace('R$', '').replace(/\./g, '').replace(',', '.').trim());
+                    }
                     valor = parseFloat(valor) || 0;
 
                     if (valor > 0) {
                         const newId = 'imp_r_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+                        const statusLido = String(extrairValorPorSinonimos(row, sinStatus) || 'PENDENTE').toUpperCase();
+
                         const itemData = {
-                            cliente: cliente,
-                            desc: row.Descrição || row.Descricao || row.Desc || 'Importado via Excel',
+                            cliente: String(cliente),
+                            desc: String(extrairValorPorSinonimos(row, sinDesc) || 'Importado via Excel'),
                             valor: valor,
-                            venc: row.Vencimento || row.Venc || new Date().toISOString().split('T')[0],
-                            status: (row.Status || 'PENDENTE').toUpperCase().includes('PAG') ? 'PAGO' : 'PENDENTE',
-                            cc: row.Categoria || row.CentroCusto || row.CC || 'SERVIÇOS'
+                            venc: extrairValorPorSinonimos(row, sinVenc) || new Date().toISOString().split('T')[0],
+                            status: statusLido.includes('PAG') ? 'PAGO' : 'PENDENTE',
+                            cc: String(extrairValorPorSinonimos(row, sinCC) || 'SERVIÇOS')
                         };
 
-                        if (isFirebaseConnected && db) db.collection("receber").doc(newId).set(itemData);
-                        else dbReceber.push({ id: newId, ...itemData });
+                        if (typeof isFirebaseConnected !== 'undefined' && isFirebaseConnected && db) {
+                            db.collection("receber").doc(newId).set(itemData);
+                        } else if (typeof dbReceber !== 'undefined') {
+                            dbReceber.push({ id: newId, ...itemData });
+                        }
                         countReceber++;
                     }
                 });
             }
 
-            carregarDados();
+            if (typeof carregarDados === 'function') carregarDados();
+
             e.target.value = '';
             alert(`Planilha importada com sucesso!\n\n• Contas a Pagar: ${countPagar}\n• Contas a Receber: ${countReceber}`);
+
         } catch (err) {
-            console.error("Erro no Excel:", err);
-            alert("Erro ao ler arquivo Excel. Certifique-se de que é um arquivo .xlsx válido.");
+            console.error("Erro na importação Excel:", err);
+            alert("Erro ao ler planilha Excel. Certifique-se de que é um arquivo .xlsx válido.");
         }
     };
     reader.readAsArrayBuffer(file);
