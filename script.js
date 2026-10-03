@@ -14,6 +14,9 @@ let dtFimCustom = null;
 let chartFluxo = null;
 let chartCat = null;
 
+// Controla se a migração automática de datas antigas já foi executada
+let jaCorrigiuDatas = false;
+
 const firebaseConfig = {
     apiKey: "AIzaSyAh08u5nObwe2ITXW1SmS1njgZdjez63mc",
     authDomain: "ricpower-finance-4312b.firebaseapp.com",
@@ -251,10 +254,16 @@ function filtrarPorPeriodo(item) {
     return true;
 }
 
-// --- CORRIGIR REGISTROS ANTIGOS COM DATA SERIAL NO BANCO DE DADOS ---
-function corrigirDatasRegistrosAntigos() {
+// --- CORRIGIR REGISTROS ANTIGOS COM DATA SERIAL NO BANCO DE DADOS (OTIMIZADO COM BATCH) ---
+async function corrigirDatasRegistrosAntigos() {
+    if (jaCorrigiuDatas) return;
+    jaCorrigiuDatas = true;
+
     let alterouPagar = false;
     let alterouReceber = false;
+
+    const batch = (isFirebaseConnected && db) ? db.batch() : null;
+    let operacoesBatch = 0;
 
     // 1. Corrigir Contas a Pagar
     dbPagar.forEach(item => {
@@ -265,8 +274,10 @@ function corrigirDatasRegistrosAntigos() {
             item.vencimento = dataCorrigida;
             alterouPagar = true;
 
-            if (isFirebaseConnected && db) {
-                db.collection("pagar").doc(String(item.id)).update({ venc: dataCorrigida, vencimento: dataCorrigida });
+            if (batch) {
+                const docRef = db.collection("pagar").doc(String(item.id));
+                batch.update(docRef, { venc: dataCorrigida, vencimento: dataCorrigida });
+                operacoesBatch++;
             }
         }
     });
@@ -280,11 +291,21 @@ function corrigirDatasRegistrosAntigos() {
             item.vencimento = dataCorrigida;
             alterouReceber = true;
 
-            if (isFirebaseConnected && db) {
-                db.collection("receber").doc(String(item.id)).update({ venc: dataCorrigida, vencimento: dataCorrigida });
+            if (batch) {
+                const docRef = db.collection("receber").doc(String(item.id));
+                batch.update(docRef, { venc: dataCorrigida, vencimento: dataCorrigida });
+                operacoesBatch++;
             }
         }
     });
+
+    if (batch && operacoesBatch > 0) {
+        try {
+            await batch.commit();
+        } catch (err) {
+            console.error("Erro ao aplicar lote de atualização de datas:", err);
+        }
+    }
 
     if (alterouPagar) localStorage.setItem('ric_pagar', JSON.stringify(dbPagar));
     if (alterouReceber) localStorage.setItem('ric_receber', JSON.stringify(dbReceber));
@@ -292,7 +313,7 @@ function corrigirDatasRegistrosAntigos() {
 
 // RENDERIZAÇÃO
 function carregarDados() {
-    // Corrige automaticamente registros salvos anteriormente com número serial do Excel
+    // Executa a verificação de migração apenas uma vez na carga inicial
     corrigirDatasRegistrosAntigos();
 
     localStorage.setItem('ric_pagar', JSON.stringify(dbPagar));
