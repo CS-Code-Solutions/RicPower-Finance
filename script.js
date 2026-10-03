@@ -502,6 +502,53 @@ async function zerarTodoSistema() {
     }
 }
 
+// --- GERAR DESPESAS FIXAS DO MÊS ATUAL ---
+function gerarDespesasFixasMesAtual() {
+    const hoje = new Date();
+    const anoAtual = hoje.getFullYear();
+    const mesAtual = String(hoje.getMonth() + 1).padStart(2, '0');
+
+    // Filtra despesas marcadas como fixas
+    const fixas = dbPagar.filter(p => p.fixa === true || p.fixa === 'SIM');
+
+    if (fixas.length === 0) {
+        alert("Nenhuma despesa marcada como 'Fixa' foi encontrada para replicação.");
+        return;
+    }
+
+    let criadas = 0;
+    fixas.forEach(item => {
+        const diaOriginal = (item.venc || item.vencimento || '10').split('-')[2] || '10';
+        const novoVenc = `${anoAtual}-${mesAtual}-${diaOriginal}`;
+
+        // Verifica se já existe a despesa lançada para o mês atual
+        const jaExiste = dbPagar.some(p => p.fornecedor === item.fornecedor && (p.venc || p.vencimento) === novoVenc);
+
+        if (!jaExiste) {
+            const newId = 'fixa_' + Date.now() + '_' + Math.floor(Math.random() * 1000);
+            const novoItem = {
+                fornecedor: item.fornecedor,
+                desc: item.desc || item.descricao,
+                valor: Number(item.valor),
+                venc: novoVenc,
+                status: 'PENDENTE',
+                cc: item.cc || item.categoria || 'ADMINISTRATIVO',
+                fixa: true
+            };
+
+            if (isFirebaseConnected && db) {
+                db.collection("pagar").doc(newId).set(novoItem);
+            } else {
+                dbPagar.push({ id: newId, ...novoItem });
+            }
+            criadas++;
+        }
+    });
+
+    if (!isFirebaseConnected) carregarDados();
+    alert(`Geradas ${criadas} despesas fixas para o mês de ${mesAtual}/${anoAtual}!`);
+}
+
 // --- FUNÇÃO AUXILIAR DE MAPEAMENTO DE CAMPOS MULTI-MODELO ---
 function extrairValorPorSinonimos(row, sinonimos) {
     if (!row) return undefined;
@@ -934,4 +981,78 @@ function salvarEstoque(e) {
         carregarDados();
     }
     fecharModal('modalEstoque');
+}
+
+// --- FUNÇÕES DE EDIÇÃO E MOVIMENTAÇÃO (NOVAS) ---
+
+function movimentarEstoque(id) {
+    let item = dbEstoque.find(x => String(x.id) === String(id));
+    if (!item) return;
+
+    let qtdStr = prompt(`Movimentação de Estoque: ${item.nome}\nQuantidade Atual: ${item.qtd}\n\nDigite a quantidade a adicionar ou subtrair (Ex: 5 ou -2):`);
+    if (qtdStr === null || qtdStr.trim() === "") return;
+
+    let qtdDelta = parseInt(qtdStr, 10);
+    if (isNaN(qtdDelta)) {
+        alert("Quantidade inválida!");
+        return;
+    }
+
+    let novaQtd = Math.max(0, Number(item.qtd) + qtdDelta);
+
+    if (isFirebaseConnected && db) {
+        db.collection("estoque").doc(String(id)).update({ qtd: novaQtd });
+    } else {
+        item.qtd = novaQtd;
+        carregarDados();
+    }
+}
+
+function editarEstoque(id) {
+    let item = dbEstoque.find(x => String(x.id) === String(id));
+    if (!item) return;
+
+    document.getElementById('estId').value = item.id;
+    document.getElementById('estSKU').value = item.sku || '';
+    document.getElementById('estNome').value = item.nome || '';
+    document.getElementById('estQtd').value = item.qtd || 0;
+    document.getElementById('estMin').value = item.min || item.qtdMin || 5;
+    document.getElementById('estCusto').value = item.custo || item.precoCusto || 0;
+    document.getElementById('estVenda').value = item.venda || item.precoVenda || 0;
+
+    document.getElementById('modalEstoqueTitle').innerText = 'Editar Peça no Estoque';
+    abrirModal('modalEstoque');
+}
+
+function editarPagar(id) {
+    let item = dbPagar.find(x => String(x.id) === String(id));
+    if (!item) return;
+
+    document.getElementById('pagarId').value = item.id;
+    document.getElementById('pagarFornecedor').value = item.fornecedor || '';
+    document.getElementById('pagarDesc').value = item.desc || item.descricao || '';
+    document.getElementById('pagarValor').value = item.valor || 0;
+    document.getElementById('pagarVenc').value = item.venc || item.vencimento || '';
+    document.getElementById('pagarStatus').value = item.status || 'PENDENTE';
+    document.getElementById('pagarCC').value = item.cc || item.categoria || 'ADMINISTRATIVO';
+    document.getElementById('pagarFixa').value = (item.fixa === true || item.fixa === 'SIM') ? 'SIM' : 'NAO';
+
+    document.getElementById('modalPagarTitle').innerText = 'Editar Conta a Pagar';
+    abrirModal('modalPagar');
+}
+
+function editarReceber(id) {
+    let item = dbReceber.find(x => String(x.id) === String(id));
+    if (!item) return;
+
+    document.getElementById('receberId').value = item.id;
+    document.getElementById('receberCliente').value = item.cliente || '';
+    document.getElementById('receberDesc').value = item.desc || item.descricao || '';
+    document.getElementById('receberValor').value = item.valor || 0;
+    document.getElementById('receberVenc').value = item.venc || item.vencimento || '';
+    document.getElementById('receberStatus').value = item.status || 'PENDENTE';
+    document.getElementById('receberCC').value = item.cc || item.categoria || 'SERVIÇOS';
+
+    document.getElementById('modalReceberTitle').innerText = 'Editar Conta a Receber';
+    abrirModal('modalReceber');
 }
