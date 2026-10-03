@@ -618,17 +618,28 @@ function encontrarLinhaCabecalho(sheet) {
 function validarDataImportacao(dataStr, filtroOpcao) {
     if (!filtroOpcao || filtroOpcao === 'ALL' || !dataStr) return true;
 
-    const dataItem = new Date(dataStr + 'T00:00:00');
+    let dataItem;
+    if (dataStr.includes('-')) {
+        const partes = dataStr.split('-');
+        dataItem = new Date(partes[0], partes[1] - 1, partes[2]);
+    } else if (dataStr.includes('/')) {
+        const partes = dataStr.split('/');
+        dataItem = new Date(partes[2], partes[1] - 1, partes[0]);
+    } else {
+        dataItem = new Date(dataStr);
+    }
+
     if (isNaN(dataItem.getTime())) return true;
 
     const hoje = new Date();
     hoje.setHours(23, 59, 59, 999);
 
     if (filtroOpcao === '30DAYS') {
-        const limite30Dias = new Date();
-        limite30Dias.setDate(hoje.getDate() - 30);
-        limite30Dias.setHours(0, 0, 0, 0);
-        return dataItem >= limite30Dias && dataItem <= hoje;
+        const limite30DiasAtras = new Date();
+        limite30DiasAtras.setDate(hoje.getDate() - 30);
+        limite30DiasAtras.setHours(0, 0, 0, 0);
+
+        return dataItem >= limite30DiasAtras;
     }
 
     if (filtroOpcao === 'ESTE_MES') {
@@ -646,19 +657,16 @@ function validarDataImportacao(dataStr, filtroOpcao) {
 function formatarDataExcel(valorData) {
     if (!valorData) return new Date().toISOString().split('T')[0];
 
-    // Se já é uma string no formato YYYY-MM-DD
     if (typeof valorData === 'string' && valorData.includes('-')) {
         return valorData.trim();
     }
 
-    // Se veio como um objeto Date (gerado pelo cellDates: true)
     if (valorData instanceof Date) {
         if (!isNaN(valorData.getTime())) {
             return valorData.toISOString().split('T')[0];
         }
     }
 
-    // Se veio como número Serial do Excel (ex: 46042)
     if (!isNaN(valorData) && Number(valorData) > 30000) {
         const dataJS = new Date((Number(valorData) - (25567 + 2)) * 86400 * 1000);
         if (!isNaN(dataJS.getTime())) {
@@ -678,7 +686,6 @@ function importarPlanilhaExcel(e) {
     reader.onload = function(evt) {
         try {
             const data = new Uint8Array(evt.target.result);
-            // Ativa o leitor de datas do SheetJS
             const workbook = XLSX.read(data, { type: 'array', cellDates: true, dateNF: 'yyyy-mm-dd' });
 
             const limitSelect = document.getElementById('excelImportLimit');
@@ -714,7 +721,7 @@ function importarPlanilhaExcel(e) {
             if (sheetPagarName) {
                 const sheetPagar = workbook.Sheets[sheetPagarName];
                 const linhaCabecalho = encontrarLinhaCabecalho(sheetPagar);
-                let rows = XLSX.utils.sheet_to_json(sheetPagar, { range: linhaCabecalho, raw: false });
+                let rows = XLSX.utils.sheet_to_json(sheetPagar, { range: linhaCabecalho });
 
                 if (limitValue !== 'ALL') rows = rows.slice(-parseInt(limitValue, 10));
 
@@ -757,7 +764,7 @@ function importarPlanilhaExcel(e) {
             if (sheetReceberName) {
                 const sheetReceber = workbook.Sheets[sheetReceberName];
                 const linhaCabecalho = encontrarLinhaCabecalho(sheetReceber);
-                let rows = XLSX.utils.sheet_to_json(sheetReceber, { range: linhaCabecalho, raw: false });
+                let rows = XLSX.utils.sheet_to_json(sheetReceber, { range: linhaCabecalho });
 
                 if (limitValue !== 'ALL') rows = rows.slice(-parseInt(limitValue, 10));
 
@@ -799,7 +806,7 @@ function importarPlanilhaExcel(e) {
             if (sheetEstoqueName) {
                 const sheetEstoque = workbook.Sheets[sheetEstoqueName];
                 const linhaCabecalho = encontrarLinhaCabecalho(sheetEstoque);
-                let rows = XLSX.utils.sheet_to_json(sheetEstoque, { range: linhaCabecalho, raw: false });
+                let rows = XLSX.utils.sheet_to_json(sheetEstoque, { range: linhaCabecalho });
 
                 if (limitValue !== 'ALL') rows = rows.slice(-parseInt(limitValue, 10));
 
