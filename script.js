@@ -40,6 +40,9 @@ try {
 
 // INICIALIZAÇÃO E SESSÃO
 document.addEventListener('DOMContentLoaded', () => {
+    // Carrega do cache local imediatamente para evitar tela em branco ao recarregar
+    carregarDadosLocal(false);
+
     if (auth) {
         auth.onAuthStateChanged((user) => {
             if (user) {
@@ -59,7 +62,7 @@ function verificarModoLocal() {
     if (localStorage.getItem('ric_logged') === 'true') {
         document.getElementById('login-screen').style.display = 'none';
         trocarAba('dashboard');
-        carregarDadosLocal();
+        carregarDadosLocal(true);
     }
 }
 
@@ -71,30 +74,45 @@ function iniciarEscutaFirebase() {
         db.collection("pagar").onSnapshot(snapshot => {
             dbPagar = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             carregarDados();
+        }, error => {
+            console.error("Erro no Firebase (pagar):", error);
+            carregarDadosLocal(true);
         });
 
         db.collection("receber").onSnapshot(snapshot => {
             dbReceber = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             carregarDados();
+        }, error => {
+            console.error("Erro no Firebase (receber):", error);
+            carregarDadosLocal(true);
         });
 
         db.collection("estoque").onSnapshot(snapshot => {
             dbEstoque = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
             carregarDados();
+        }, error => {
+            console.error("Erro no Firebase (estoque):", error);
+            carregarDadosLocal(true);
         });
     } else {
-        carregarDadosLocal();
+        carregarDadosLocal(true);
     }
 }
 
-function carregarDadosLocal() {
-    document.getElementById('syncBadge').className = 'sync-badge offline';
-    document.getElementById('syncBadge').innerHTML = '<i class="fas fa-exclamation-triangle"></i> Modo Off-line';
+function carregarDadosLocal(renderizar = true) {
+    const badge = document.getElementById('syncBadge');
+    if (badge && !isFirebaseConnected) {
+        badge.className = 'sync-badge offline';
+        badge.innerHTML = '<i class="fas fa-exclamation-triangle"></i> Modo Off-line';
+    }
     
     dbPagar = JSON.parse(localStorage.getItem('ric_pagar')) || [];
     dbReceber = JSON.parse(localStorage.getItem('ric_receber')) || [];
     dbEstoque = JSON.parse(localStorage.getItem('ric_estoque')) || [];
-    carregarDados();
+
+    if (renderizar) {
+        carregarDados();
+    }
 }
 
 // LOGIN / LOGOUT SEGURO
@@ -178,7 +196,6 @@ function trocarAba(nomeAba, elemento) {
         elemento.classList.add('active');
     }
 
-    // OTIMIZAÇÃO MOBILE: Fecha a sidebar automaticamente ao trocar de aba no smartphone
     const sidebar = document.getElementById('sidebar');
     const overlay = document.querySelector('.sidebar-overlay');
     if (sidebar && sidebar.classList.contains('active')) {
@@ -222,11 +239,10 @@ function filtrarPorPeriodo(item) {
 
 // RENDERIZAÇÃO
 function carregarDados() {
-    if (!isFirebaseConnected) {
-        localStorage.setItem('ric_pagar', JSON.stringify(dbPagar));
-        localStorage.setItem('ric_receber', JSON.stringify(dbReceber));
-        localStorage.setItem('ric_estoque', JSON.stringify(dbEstoque));
-    }
+    // Sincroniza sempre no LocalStorage para garantir persistência mesmo offline/F5
+    localStorage.setItem('ric_pagar', JSON.stringify(dbPagar));
+    localStorage.setItem('ric_receber', JSON.stringify(dbReceber));
+    localStorage.setItem('ric_estoque', JSON.stringify(dbEstoque));
 
     const pagarFiltrado = dbPagar.filter(filtrarPorPeriodo);
     const receberFiltrado = dbReceber.filter(filtrarPorPeriodo);
@@ -508,7 +524,6 @@ function gerarDespesasFixasMesAtual() {
     const anoAtual = hoje.getFullYear();
     const mesAtual = String(hoje.getMonth() + 1).padStart(2, '0');
 
-    // Filtra despesas marcadas como fixas
     const fixas = dbPagar.filter(p => p.fixa === true || p.fixa === 'SIM');
 
     if (fixas.length === 0) {
@@ -521,7 +536,6 @@ function gerarDespesasFixasMesAtual() {
         const diaOriginal = (item.venc || item.vencimento || '10').split('-')[2] || '10';
         const novoVenc = `${anoAtual}-${mesAtual}-${diaOriginal}`;
 
-        // Verifica se já existe a despesa lançada para o mês atual
         const jaExiste = dbPagar.some(p => p.fornecedor === item.fornecedor && (p.venc || p.vencimento) === novoVenc);
 
         if (!jaExiste) {
@@ -545,7 +559,7 @@ function gerarDespesasFixasMesAtual() {
         }
     });
 
-    if (!isFirebaseConnected) carregarDados();
+    carregarDados();
     alert(`Geradas ${criadas} despesas fixas para o mês de ${mesAtual}/${anoAtual}!`);
 }
 
@@ -730,7 +744,7 @@ function importarPlanilhaExcel(e) {
                 });
             }
 
-            if (typeof carregarDados === 'function') carregarDados();
+            carregarDados();
 
             e.target.value = '';
             alert(`Planilha importada com sucesso!\n\n• Contas a Pagar: ${countPagar}\n• Contas a Receber: ${countReceber}\n• Itens do Estoque: ${countEstoque}`);
@@ -983,7 +997,7 @@ function salvarEstoque(e) {
     fecharModal('modalEstoque');
 }
 
-// --- FUNÇÕES DE EDIÇÃO E MOVIMENTAÇÃO (NOVAS) ---
+// --- FUNÇÕES DE EDIÇÃO E MOVIMENTAÇÃO DE ESTOQUE ---
 
 function movimentarEstoque(id) {
     let item = dbEstoque.find(x => String(x.id) === String(id));
