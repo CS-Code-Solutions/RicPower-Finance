@@ -491,7 +491,7 @@ function extrairValorPorSinonimos(row, sinonimos) {
 // --- ENCONTRAR A LINHA DO CABEÇALHO AUTOMATICAMENTE ---
 function encontrarLinhaCabecalho(sheet) {
     const rawMatrix = XLSX.utils.sheet_to_json(sheet, { header: 1 });
-    const palavrasChave = ['FORNECEDOR', 'CLIENTE', 'VALOR', 'VENCIMENTO', 'DATA', 'STATUS', 'DESCRIÇÃO', 'DESCRICAO', 'EMPRESA', 'PAGADOR'];
+    const palavrasChave = ['FORNECEDOR', 'CLIENTE', 'VALOR', 'VENCIMENTO', 'DATA', 'STATUS', 'DESCRIÇÃO', 'DESCRICAO', 'EMPRESA', 'PAGADOR', 'CÓDIGO', 'CODIGO', 'PRODUTO', 'ITEM', 'QUANTIDADE'];
     
     for (let r = 0; r < Math.min(rawMatrix.length, 15); r++) {
         const row = rawMatrix[r];
@@ -499,11 +499,11 @@ function encontrarLinhaCabecalho(sheet) {
             const strRow = row.join(' ').toUpperCase();
             const matches = palavrasChave.filter(kw => strRow.includes(kw));
             if (matches.length >= 2) {
-                return r; // Retorna a linha onde o cabeçalho foi identificado
+                return r;
             }
         }
     }
-    return 0; // Fallback caso não encontre
+    return 0;
 }
 
 // --- IMPORTAÇÃO EXCEL MULTI-MODELO COM DETECÇÃO AUTOMÁTICA ---
@@ -522,15 +522,24 @@ function importarPlanilhaExcel(e) {
 
             let countPagar = 0;
             let countReceber = 0;
+            let countEstoque = 0;
 
-            // Dicionários de sinônimos para os campos principais
+            // Sinônimos para Contas
             const sinFornecedor = ['FORNECEDOR', 'EMPRESA', 'RECEBEDOR', 'NOME', 'FORNECEDORA', 'RAZÃO SOCIAL', 'RAZAO SOCIAL'];
             const sinCliente = ['CLIENTE', 'PAGADOR', 'NOME', 'CLIENTA', 'RAZÃO SOCIAL', 'RAZAO SOCIAL'];
             const sinValor = ['VALOR A PAGAR', 'VALOR A RECEBER', 'VALOR', 'VALOR TOTAL', 'MONTANTE', 'VLR'];
             const sinVenc = ['DATA DE VENCIMENTO', 'VENCIMENTO', 'DATA VENC', 'VENC', 'DATA DE VENC', 'DATA VENCIMENTO'];
-            const sinDesc = ['DESCRIÇÃO', 'DESCRICAO', 'DESC', 'OBSERVAÇÃO', 'OBSERVACAO', 'HISTÓRICO', 'HISTORICO'];
+            const sinDesc = ['DESCRIÇÃO', 'DESCRICAO', 'DESC', 'OBSERVAÇÃO', 'OBSERVACAO', 'HISTÓRICO', 'HISTORICO', 'DESCRIÇÃO DO ITEM'];
             const sinStatus = ['STATUS', 'SITUAÇÃO', 'SITUACAO', 'ESTADO', 'PAGO?'];
             const sinCC = ['CENTRO DE CUSTO', 'CATEGORIA', 'CC', 'CENTRO CUSTO', 'C. CUSTO'];
+
+            // Sinônimos para Estoque
+            const sinSku = ['CÓDIGO', 'CODIGO', 'SKU', 'CÓD', 'COD'];
+            const sinNomeItem = ['DESCRIÇÃO DO ITEM', 'DESCRICAO DO ITEM', 'NOME', 'PRODUTO', 'ITEM', 'DESCRIÇÃO', 'DESCRICAO'];
+            const sinCatItem = ['CATEGORIA', 'CAT', 'GRUPO', 'TIPO'];
+            const sinQtd = ['QUANTIDADE', 'QTD', 'ESTOQUE', 'QUANT'];
+            const sinCusto = ['CUSTO UNITÁRIO', 'CUSTO UNITARIO', 'PREÇO CUSTO', 'PRECO CUSTO', 'CUSTO'];
+            const sinVenda = ['PREÇO DE VENDA', 'PRECO DE VENDA', 'PREÇO VENDA', 'PRECO VENDA', 'VENDA'];
 
             // 1. Processar Contas a Pagar
             const sheetPagarName = workbook.SheetNames.find(s => 
@@ -542,18 +551,13 @@ function importarPlanilhaExcel(e) {
                 const linhaCabecalho = encontrarLinhaCabecalho(sheetPagar);
                 let rows = XLSX.utils.sheet_to_json(sheetPagar, { range: linhaCabecalho });
 
-                if (limitValue !== 'ALL') {
-                    const lim = parseInt(limitValue, 10);
-                    rows = rows.slice(-lim);
-                }
+                if (limitValue !== 'ALL') rows = rows.slice(-parseInt(limitValue, 10));
 
                 rows.forEach(row => {
                     const fornecedor = extrairValorPorSinonimos(row, sinFornecedor) || 'Fornecedor Importado';
                     let valor = extrairValorPorSinonimos(row, sinValor);
 
-                    if (typeof valor === 'string') {
-                        valor = parseFloat(valor.replace('R$', '').replace(/\./g, '').replace(',', '.').trim());
-                    }
+                    if (typeof valor === 'string') valor = parseFloat(valor.replace('R$', '').replace(/\./g, '').replace(',', '.').trim());
                     valor = parseFloat(valor) || 0;
 
                     if (valor > 0) {
@@ -570,11 +574,8 @@ function importarPlanilhaExcel(e) {
                             fixa: false
                         };
 
-                        if (typeof isFirebaseConnected !== 'undefined' && isFirebaseConnected && db) {
-                            db.collection("pagar").doc(newId).set(itemData);
-                        } else if (typeof dbPagar !== 'undefined') {
-                            dbPagar.push({ id: newId, ...itemData });
-                        }
+                        if (isFirebaseConnected && db) db.collection("pagar").doc(newId).set(itemData);
+                        else dbPagar.push({ id: newId, ...itemData });
                         countPagar++;
                     }
                 });
@@ -590,18 +591,13 @@ function importarPlanilhaExcel(e) {
                 const linhaCabecalho = encontrarLinhaCabecalho(sheetReceber);
                 let rows = XLSX.utils.sheet_to_json(sheetReceber, { range: linhaCabecalho });
 
-                if (limitValue !== 'ALL') {
-                    const lim = parseInt(limitValue, 10);
-                    rows = rows.slice(-lim);
-                }
+                if (limitValue !== 'ALL') rows = rows.slice(-parseInt(limitValue, 10));
 
                 rows.forEach(row => {
                     const cliente = extrairValorPorSinonimos(row, sinCliente) || 'Cliente Importado';
                     let valor = extrairValorPorSinonimos(row, sinValor);
 
-                    if (typeof valor === 'string') {
-                        valor = parseFloat(valor.replace('R$', '').replace(/\./g, '').replace(',', '.').trim());
-                    }
+                    if (typeof valor === 'string') valor = parseFloat(valor.replace('R$', '').replace(/\./g, '').replace(',', '.').trim());
                     valor = parseFloat(valor) || 0;
 
                     if (valor > 0) {
@@ -617,12 +613,47 @@ function importarPlanilhaExcel(e) {
                             cc: String(extrairValorPorSinonimos(row, sinCC) || 'SERVIÇOS')
                         };
 
-                        if (typeof isFirebaseConnected !== 'undefined' && isFirebaseConnected && db) {
-                            db.collection("receber").doc(newId).set(itemData);
-                        } else if (typeof dbReceber !== 'undefined') {
-                            dbReceber.push({ id: newId, ...itemData });
-                        }
+                        if (isFirebaseConnected && db) db.collection("receber").doc(newId).set(itemData);
+                        else dbReceber.push({ id: newId, ...itemData });
                         countReceber++;
+                    }
+                });
+            }
+
+            // 3. Processar Estoque
+            const sheetEstoqueName = workbook.SheetNames.find(s => 
+                s.toUpperCase().includes('ESTOQUE') || s.toUpperCase().includes('PRODUTO') || s.toUpperCase().includes('PECA') || s.toUpperCase().includes('PEÇA')
+            );
+
+            if (sheetEstoqueName) {
+                const sheetEstoque = workbook.Sheets[sheetEstoqueName];
+                const linhaCabecalho = encontrarLinhaCabecalho(sheetEstoque);
+                let rows = XLSX.utils.sheet_to_json(sheetEstoque, { range: linhaCabecalho });
+
+                if (limitValue !== 'ALL') rows = rows.slice(-parseInt(limitValue, 10));
+
+                rows.forEach(row => {
+                    const sku = extrairValorPorSinonimos(row, sinSku) || ('SKU-' + Math.floor(Math.random() * 1000));
+                    const nome = extrairValorPorSinonimos(row, sinNomeItem);
+                    let qtd = parseInt(extrairValorPorSinonimos(row, sinQtd)) || 0;
+                    let custo = parseFloat(extrairValorPorSinonimos(row, sinCusto)) || 0;
+                    let venda = parseFloat(extrairValorPorSinonimos(row, sinVenda)) || 0;
+
+                    if (nome && (qtd > 0 || custo > 0 || venda > 0)) {
+                        const newId = 'imp_e_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
+                        const itemData = {
+                            sku: String(sku),
+                            nome: String(nome),
+                            cat: String(extrairValorPorSinonimos(row, sinCatItem) || 'Peças'),
+                            qtd: qtd,
+                            min: 5,
+                            custo: custo,
+                            venda: venda
+                        };
+
+                        if (isFirebaseConnected && db) db.collection("estoque").doc(newId).set(itemData);
+                        else dbEstoque.push({ id: newId, ...itemData });
+                        countEstoque++;
                     }
                 });
             }
@@ -630,7 +661,7 @@ function importarPlanilhaExcel(e) {
             if (typeof carregarDados === 'function') carregarDados();
 
             e.target.value = '';
-            alert(`Planilha importada com sucesso!\n\n• Contas a Pagar: ${countPagar}\n• Contas a Receber: ${countReceber}`);
+            alert(`Planilha importada com sucesso!\n\n• Contas a Pagar: ${countPagar}\n• Contas a Receber: ${countReceber}\n• Itens do Estoque: ${countEstoque}`);
 
         } catch (err) {
             console.error("Erro na importação Excel:", err);
