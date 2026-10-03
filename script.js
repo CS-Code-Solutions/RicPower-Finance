@@ -251,8 +251,50 @@ function filtrarPorPeriodo(item) {
     return true;
 }
 
+// --- CORRIGIR REGISTROS ANTIGOS COM DATA SERIAL NO BANCO DE DADOS ---
+function corrigirDatasRegistrosAntigos() {
+    let alterouPagar = false;
+    let alterouReceber = false;
+
+    // 1. Corrigir Contas a Pagar
+    dbPagar.forEach(item => {
+        const rawVenc = item.venc || item.vencimento;
+        if (rawVenc && (!isNaN(rawVenc) && Number(rawVenc) > 30000)) {
+            const dataCorrigida = formatarDataExcel(rawVenc);
+            item.venc = dataCorrigida;
+            item.vencimento = dataCorrigida;
+            alterouPagar = true;
+
+            if (isFirebaseConnected && db) {
+                db.collection("pagar").doc(String(item.id)).update({ venc: dataCorrigida, vencimento: dataCorrigida });
+            }
+        }
+    });
+
+    // 2. Corrigir Contas a Receber
+    dbReceber.forEach(item => {
+        const rawVenc = item.venc || item.vencimento;
+        if (rawVenc && (!isNaN(rawVenc) && Number(rawVenc) > 30000)) {
+            const dataCorrigida = formatarDataExcel(rawVenc);
+            item.venc = dataCorrigida;
+            item.vencimento = dataCorrigida;
+            alterouReceber = true;
+
+            if (isFirebaseConnected && db) {
+                db.collection("receber").doc(String(item.id)).update({ venc: dataCorrigida, vencimento: dataCorrigida });
+            }
+        }
+    });
+
+    if (alterouPagar) localStorage.setItem('ric_pagar', JSON.stringify(dbPagar));
+    if (alterouReceber) localStorage.setItem('ric_receber', JSON.stringify(dbReceber));
+}
+
 // RENDERIZAÇÃO
 function carregarDados() {
+    // Corrige automaticamente registros salvos anteriormente com número serial do Excel
+    corrigirDatasRegistrosAntigos();
+
     localStorage.setItem('ric_pagar', JSON.stringify(dbPagar));
     localStorage.setItem('ric_receber', JSON.stringify(dbReceber));
     localStorage.setItem('ric_estoque', JSON.stringify(dbEstoque));
