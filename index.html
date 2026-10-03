@@ -64,6 +64,7 @@
         .sidebar-footer { margin-top: auto; padding: 20px; border-top: 1px solid rgba(255,255,255,0.05); font-size: 12px; color: #888; text-align: center; }
 
         .sidebar-overlay { display: none; position: fixed; top: 0; left: 0; width: 100vw; height: 100vh; background: rgba(0,0,0,0.5); z-index: 999; }
+        .sidebar-overlay.active { display: block; }
         .mobile-menu-btn { display: none; background: var(--primary-color); color: var(--accent-color); border: none; padding: 10px 14px; border-radius: 6px; font-size: 18px; cursor: pointer; }
 
         .main-content { flex: 1; padding: 30px; overflow-y: auto; height: 100vh; width: 100%; }
@@ -141,16 +142,34 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
+        /* --- OTIMIZAÇÃO UX/UI MOBILE --- */
         @media (max-width: 768px) {
-            .sidebar { position: fixed; left: -260px; top: 0; height: 100vh; z-index: 1001; }
+            body { font-size: 14px; }
+            .main-content { padding: 12px; height: auto; min-height: 100vh; overflow-x: hidden; }
+            .header { flex-direction: column; align-items: flex-start; gap: 10px; margin-bottom: 15px; }
+            .header-left { width: 100%; justify-content: space-between; }
+            .header h1 { font-size: 20px; }
+
+            .sidebar { position: fixed; left: -280px; top: 0; width: 280px; height: 100vh; z-index: 2001; box-shadow: 4px 0 15px rgba(0,0,0,0.3); }
             .sidebar.active { left: 0; }
-            .sidebar-overlay.active { display: block; }
-            .mobile-menu-btn { display: inline-flex; }
-            .main-content { padding: 15px; }
-            .cards-grid { grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: 10px; }
-            .dashboard-grid { grid-template-columns: 1fr; }
-            .filter-bar { width: 100%; flex-direction: column; align-items: stretch; }
-            .form-grid { grid-template-columns: 1fr; }
+            .sidebar-overlay { z-index: 2000; }
+            .mobile-menu-btn { display: inline-flex; align-items: center; justify-content: center; width: 42px; height: 42px; border-radius: 8px; }
+
+            .cards-grid { grid-template-columns: repeat(2, 1fr); gap: 10px; margin-bottom: 15px; }
+            .card { padding: 12px; flex-direction: column; align-items: flex-start; gap: 8px; }
+            .card-info h3 { font-size: 10px; }
+            .card-info h2 { font-size: 16px; }
+            .card-icon { display: none; }
+
+            .dashboard-grid { grid-template-columns: 1fr; gap: 15px; }
+            .panel { padding: 15px; border-radius: 8px; margin-bottom: 15px; }
+            .panel-header { flex-direction: column; align-items: stretch; gap: 10px; }
+            .filter-bar { width: 100%; flex-direction: column; align-items: stretch; gap: 8px; }
+            .filter-input, .btn { width: 100%; height: 44px; font-size: 14px; justify-content: center; }
+
+            .modal { padding: 10px; align-items: flex-end; }
+            .modal-content { max-height: 85vh; border-radius: 16px 16px 0 0; padding: 20px; }
+            .form-grid { grid-template-columns: 1fr; gap: 10px; }
         }
     </style>
 </head>
@@ -159,7 +178,7 @@
     <!-- OVERLAY MÓVEL -->
     <div class="sidebar-overlay" onclick="toggleSidebar()"></div>
 
-    <!-- TELA DE LOGIN -->
+    <!-- TELA DE LOGIN SEGUIRA -->
     <div id="login-screen">
         <div class="login-card">
             <div class="logo">
@@ -170,11 +189,11 @@
             <form onsubmit="realizarLogin(event)">
                 <div style="margin-bottom: 15px; text-align: left;">
                     <label style="font-size: 11px; text-transform: uppercase; font-weight: bold; color: #ccc;">E-mail</label>
-                    <input type="email" id="loginEmail" class="form-control" style="background: #2b2b2b; color: white; border-color: #444;" value="admin@richard.com" required>
+                    <input type="email" id="loginEmail" class="form-control" style="background: #2b2b2b; color: white; border-color: #444;" placeholder="seu.email@dominio.com" required>
                 </div>
                 <div style="margin-bottom: 25px; text-align: left;">
                     <label style="font-size: 11px; text-transform: uppercase; font-weight: bold; color: #ccc;">Senha</label>
-                    <input type="password" id="loginSenha" class="form-control" style="background: #2b2b2b; color: white; border-color: #444;" value="admin123" required>
+                    <input type="password" id="loginSenha" class="form-control" style="background: #2b2b2b; color: white; border-color: #444;" placeholder="Sua senha" required>
                 </div>
                 <button type="submit" id="btnLoginSubmit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 12px; font-size: 15px; margin-bottom: 20px;">
                     <i class="fas fa-sign-in-alt"></i> Entrar no Sistema
@@ -216,7 +235,7 @@
                 <span id="syncBadge" class="sync-badge online"><i class="fas fa-wifi"></i> Nuvem Sincronizada</span>
             </div>
             
-            <div style="display: flex; gap: 10px; align-items: center;">
+            <div style="display: flex; gap: 10px; align-items: center; width: 100%; max-width: max-content;">
                 <button type="button" class="btn btn-secondary" onclick="carregarDados();"><i class="fas fa-sync-alt"></i> Atualizar</button>
 
                 <div class="modern-filter-container">
@@ -259,7 +278,7 @@
                     <div class="card-icon"><i class="fas fa-hourglass-half" style="color: #8e44ad;"></i></div>
                 </div>
                 <div class="card real-out">
-                    <div class="card-info"><h3>Saídas Realizadas (Já Saiu)</h3><h2 id="kpiRealOut">R$ 0,00</h2></div>
+                    <div class="card-info"><h3>Saídas Realizadas</h3><h2 id="kpiRealOut">R$ 0,00</h2></div>
                     <div class="card-icon"><i class="fas fa-file-invoice" style="color: var(--danger-color);"></i></div>
                 </div>
                 <div class="card pending-out">
@@ -271,18 +290,18 @@
                     <div class="card-icon"><i class="fas fa-wallet" style="color: var(--accent-color); opacity: 1;"></i></div>
                 </div>
                 <div class="card balance-projected">
-                    <div class="card-info"><h3>Saldo Projetado Final</h3><h2 id="kpiBalanceProjected">R$ 0,00</h2></div>
+                    <div class="card-info"><h3>Saldo Projetado</h3><h2 id="kpiBalanceProjected">R$ 0,00</h2></div>
                     <div class="card-icon"><i class="fas fa-chart-line" style="color: var(--info-color);"></i></div>
                 </div>
                 <div class="card stock">
-                    <div class="card-info"><h3>Patrimônio em Estoque</h3><h2 id="kpiStockTotal">R$ 0,00</h2></div>
+                    <div class="card-info"><h3>Estoque Total</h3><h2 id="kpiStockTotal">R$ 0,00</h2></div>
                     <div class="card-icon"><i class="fas fa-boxes" style="color: #2c3e50;"></i></div>
                 </div>
             </div>
 
             <div class="dashboard-grid">
                 <div class="panel">
-                    <div class="panel-header"><h3 class="panel-title">Fluxo de Caixa Realizado (Entradas vs Saídas)</h3></div>
+                    <div class="panel-header"><h3 class="panel-title">Fluxo de Caixa Realizado</h3></div>
                     <canvas id="chartFluxoCaixa" height="110"></canvas>
                 </div>
                 <div class="panel">
@@ -308,7 +327,7 @@
                 <div class="panel-header">
                     <h3 class="panel-title">Gestão de Contas a Pagar</h3>
                     <div class="filter-bar">
-                        <input type="text" id="buscaPagar" class="filter-input" placeholder="🔍 Buscar recebedor / empresa..." oninput="carregarDados()">
+                        <input type="text" id="buscaPagar" class="filter-input" placeholder="🔍 Buscar recebedor..." oninput="carregarDados()">
                         <select id="filtroStatusPagar" class="filter-input" onchange="carregarDados()">
                             <option value="TODOS">Todos os Status</option>
                             <option value="PENDENTE">Pendente</option>
@@ -479,6 +498,10 @@
                     <p style="font-size: 12px; color: #777;">
                         <i class="fas fa-info-circle"></i> O leitor automático processa abas com o nome "PAGAR/SAIDA", "RECEBER/ENTRADA" e "ESTOQUE".
                     </p>
+                    
+                    <button class="btn btn-danger" onclick="zerarTodoSistema()" style="padding: 12px; font-weight: bold; width: 100%; margin-top: 20px; justify-content: center;">
+                        <i class="fas fa-trash-alt"></i> Zerar Banco de Dados Antes de Importar
+                    </button>
                 </div>
 
                 <div class="panel">
@@ -486,17 +509,17 @@
                         <div class="panel-title"><i class="fas fa-database"></i> Backup & Exportação Manual</div>
                     </div>
                     <div style="display: flex; flex-direction: column; gap: 12px;">
-                        <button class="btn btn-secondary" onclick="exportarBackupJSON()" style="padding: 10px; font-weight: bold;">
+                        <button class="btn btn-secondary" onclick="exportarBackupJSON()" style="padding: 10px; font-weight: bold; justify-content: center;">
                             <i class="fas fa-download"></i> Baixar Backup Completo (JSON)
                         </button>
-                        <label class="btn btn-warning" style="text-align: center; cursor: pointer; padding: 10px; font-weight: bold; display: block;">
+                        <label class="btn btn-warning" style="text-align: center; cursor: pointer; padding: 10px; font-weight: bold; display: flex; justify-content: center; margin: 0;">
                             <i class="fas fa-upload"></i> Restaurar Backup JSON
                             <input type="file" accept=".json" style="display: none;" onchange="importarBackupJSON(event)">
                         </label>
-                        <button class="btn btn-success" onclick="exportarCSV('pagar')" style="padding: 10px; font-weight: bold;">
+                        <button class="btn btn-success" onclick="exportarCSV('pagar')" style="padding: 10px; font-weight: bold; justify-content: center;">
                             <i class="fas fa-file-csv"></i> Exportar Contas a Pagar (CSV)
                         </button>
-                        <button class="btn btn-success" onclick="exportarCSV('receber')" style="padding: 10px; font-weight: bold;">
+                        <button class="btn btn-success" onclick="exportarCSV('receber')" style="padding: 10px; font-weight: bold; justify-content: center;">
                             <i class="fas fa-file-csv"></i> Exportar Contas a Receber (CSV)
                         </button>
                     </div>
@@ -520,7 +543,7 @@
                 <div class="form-group"><label>Status</label><select id="pagarStatus" class="form-control"><option value="PENDENTE">PENDENTE</option><option value="PAGO">PAGO</option></select></div>
                 <div class="form-group"><label>Centro de Custo</label><select id="pagarCC" class="form-control"><option value="ADMINISTRATIVO">ADMINISTRATIVO</option><option value="PESSOAL">PESSOAL</option><option value="PEÇAS">PEÇAS</option></select></div>
                 <div class="form-group full"><label>É Despesa Fixa?</label><select id="pagarFixa" class="form-control"><option value="NAO">Não</option><option value="SIM">Sim</option></select></div>
-                <button type="submit" class="btn btn-danger full" style="grid-column: 1/-1; justify-content: center;">Salvar Conta a Pagar</button>
+                <button type="submit" class="btn btn-danger full" style="grid-column: 1/-1; justify-content: center; height: 44px;">Salvar Conta a Pagar</button>
             </form>
         </div>
     </div>
@@ -537,7 +560,7 @@
                 <div class="form-group"><label>Vencimento</label><input type="date" id="receberVenc" class="form-control" required></div>
                 <div class="form-group"><label>Status</label><select id="receberStatus" class="form-control"><option value="PENDENTE">PENDENTE</option><option value="PAGO">PAGO</option></select></div>
                 <div class="form-group"><label>Centro de Custo</label><select id="receberCC" class="form-control"><option value="SERVIÇOS">SERVIÇOS</option><option value="VENDAS">VENDAS</option></select></div>
-                <button type="submit" class="btn btn-success full" style="grid-column: 1/-1; justify-content: center;">Salvar Conta a Receber</button>
+                <button type="submit" class="btn btn-success full" style="grid-column: 1/-1; justify-content: center; height: 44px;">Salvar Conta a Receber</button>
             </form>
         </div>
     </div>
@@ -554,7 +577,7 @@
                 <div class="form-group"><label>Qtd Mínima</label><input type="number" id="estMin" class="form-control" required></div>
                 <div class="form-group"><label>Preço Custo (R$)</label><input type="number" step="0.01" id="estCusto" class="form-control" required></div>
                 <div class="form-group"><label>Preço Venda (R$)</label><input type="number" step="0.01" id="estVenda" class="form-control" required></div>
-                <button type="submit" class="btn btn-primary" style="grid-column: 1/-1; justify-content: center;">Salvar Peça</button>
+                <button type="submit" class="btn btn-primary" style="grid-column: 1/-1; justify-content: center; height: 44px;">Salvar Peça</button>
             </form>
         </div>
     </div>
