@@ -142,7 +142,6 @@
         .tab-content { display: none; }
         .tab-content.active { display: block; }
 
-        /* RESPONSIVIDADE MOBILE */
         @media (max-width: 768px) {
             body { font-size: 14px; }
             .main-content { padding: 12px; height: auto; min-height: 100vh; overflow-x: hidden; }
@@ -282,39 +281,50 @@
                     <div class="card-icon"><i class="fas fa-file-invoice" style="color: var(--danger-color);"></i></div>
                 </div>
                 <div class="card pending-out">
-                    <div class="card-info"><h3>A Pagar (A Sair)</h3><h2 id="kpiPendingOut">R$ 0,00</h2></div>
+                    <div class="card-info"><h3>A Pagar (Pendente)</h3><h2 id="kpiPendingOut">R$ 0,00</h2></div>
                     <div class="card-icon"><i class="fas fa-clock" style="color: var(--warning-color);"></i></div>
                 </div>
                 <div class="card balance-real">
-                    <div class="card-info"><h3 style="color: #b38f00; font-weight: bold;">Saldo Real Atual</h3><h2 id="kpiBalanceReal" style="color: #111;">R$ 0,00</h2></div>
-                    <div class="card-icon"><i class="fas fa-wallet" style="color: var(--accent-color); opacity: 1;"></i></div>
+                    <div class="card-info"><h3>Saldo Atual (Realizado)</h3><h2 id="kpiBalanceReal">R$ 0,00</h2></div>
+                    <div class="card-icon"><i class="fas fa-wallet" style="color: var(--accent-color);"></i></div>
                 </div>
                 <div class="card balance-projected">
                     <div class="card-info"><h3>Saldo Projetado</h3><h2 id="kpiBalanceProjected">R$ 0,00</h2></div>
                     <div class="card-icon"><i class="fas fa-chart-line" style="color: var(--info-color);"></i></div>
                 </div>
                 <div class="card stock">
-                    <div class="card-info"><h3>Estoque Total</h3><h2 id="kpiStockTotal">R$ 0,00</h2></div>
+                    <div class="card-info"><h3>Total Estoque (Custo)</h3><h2 id="kpiStockTotal">R$ 0,00</h2></div>
                     <div class="card-icon"><i class="fas fa-boxes" style="color: #2c3e50;"></i></div>
                 </div>
             </div>
 
             <div class="dashboard-grid">
                 <div class="panel">
-                    <div class="panel-header"><h3 class="panel-title">Fluxo de Caixa Realizado</h3></div>
-                    <canvas id="chartFluxoCaixa" height="110"></canvas>
+                    <div class="panel-header"><div class="panel-title">Fluxo Realizado x Projetado</div></div>
+                    <canvas id="chartFluxoCaixa" height="120"></canvas>
                 </div>
                 <div class="panel">
-                    <div class="panel-header"><h3 class="panel-title">Despesas por Categoria</h3></div>
-                    <canvas id="chartCategorias" height="200"></canvas>
+                    <div class="panel-header"><div class="panel-title">Despesas por Categoria</div></div>
+                    <canvas id="chartCategorias" height="120"></canvas>
                 </div>
             </div>
 
             <div class="panel">
-                <div class="panel-header"><h3 class="panel-title">Lançamentos Próximos do Vencimento</h3></div>
+                <div class="panel-header">
+                    <div class="panel-title"><i class="fas fa-exclamation-circle" style="color: var(--warning-color);"></i> Próximos Vencimentos</div>
+                </div>
                 <div class="table-responsive">
                     <table>
-                        <thead><tr><th>Vencimento</th><th>Tipo</th><th>Nome / Razão</th><th>Valor</th><th>Status</th><th>Ação</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th>Vencimento</th>
+                                <th>Tipo</th>
+                                <th>Pessoa / Empresa</th>
+                                <th>Valor</th>
+                                <th>Status</th>
+                                <th>Ação</th>
+                            </tr>
+                        </thead>
                         <tbody id="tbProximosVencimentos"></tbody>
                     </table>
                 </div>
@@ -325,28 +335,43 @@
         <div id="tab-contas-pagar" class="tab-content">
             <div class="panel">
                 <div class="panel-header">
-                    <h3 class="panel-title">Gestão de Contas a Pagar</h3>
-                    <div class="filter-bar">
-                        <input type="text" id="buscaPagar" class="filter-input" placeholder="🔍 Buscar recebedor..." oninput="carregarDados()">
-                        <select id="filtroStatusPagar" class="filter-input" onchange="carregarDados()">
-                            <option value="TODOS">Todos os Status</option>
-                            <option value="PENDENTE">Pendente</option>
-                            <option value="PAGO">Pago</option>
-                            <option value="ATRASADO">Atrasado</option>
-                        </select>
-                        <select id="filtroCCPagar" class="filter-input" onchange="carregarDados()">
-                            <option value="TODOS">Todos os C. Custos</option>
-                            <option value="PESSOAL">Pessoal</option>
-                            <option value="ADMINISTRATIVO">Administrativo</option>
-                            <option value="PEÇAS">Peças</option>
-                        </select>
-                        <button class="btn btn-warning" onclick="gerarDespesasFixasMesAtual()"><i class="fas fa-bolt"></i> Gerar Fixas do Mês</button>
-                        <button class="btn btn-danger" onclick="abrirModalPagar()"><i class="fas fa-plus"></i> Nova Conta a Pagar</button>
+                    <div class="panel-title">Lançamentos de Contas a Pagar</div>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button class="btn btn-primary" onclick="abrirModalPagar()"><i class="fas fa-plus"></i> Nova Conta</button>
+                        <button class="btn btn-secondary" onclick="gerarDespesasFixasMesAtual()"><i class="fas fa-sync"></i> Gerar Fixas Mês</button>
+                        <button class="btn btn-success" onclick="exportarCSV('pagar')"><i class="fas fa-file-csv"></i> Exportar</button>
                     </div>
                 </div>
+
+                <div class="filter-bar" style="margin-bottom: 15px;">
+                    <input type="text" id="buscaPagar" class="filter-input" placeholder="Buscar fornecedor ou descrição..." oninput="carregarDados()">
+                    <select id="filtroStatusPagar" class="filter-input" onchange="carregarDados()">
+                        <option value="TODOS">Todos os Status</option>
+                        <option value="PENDENTE">PENDENTE</option>
+                        <option value="ATRASADO">ATRASADO</option>
+                        <option value="PAGO">PAGO</option>
+                    </select>
+                    <select id="filtroCCPagar" class="filter-input" onchange="carregarDados()">
+                        <option value="TODOS">Todas as Categorias</option>
+                        <option value="ADMINISTRATIVO">ADMINISTRATIVO</option>
+                        <option value="PESSOAL">PESSOAL</option>
+                        <option value="PEÇAS">PEÇAS</option>
+                    </select>
+                </div>
+
                 <div class="table-responsive">
                     <table>
-                        <thead><tr><th>Vencimento</th><th>Recebedor / Empresa</th><th>Descrição</th><th>Valor</th><th>Status</th><th>Centro Custo</th><th>Ações</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th>Vencimento</th>
+                                <th>Fornecedor</th>
+                                <th>Descrição</th>
+                                <th>Valor</th>
+                                <th>Status</th>
+                                <th>Categoria</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
                         <tbody id="tbPagar"></tbody>
                     </table>
                 </div>
@@ -357,117 +382,144 @@
         <div id="tab-contas-receber" class="tab-content">
             <div class="panel">
                 <div class="panel-header">
-                    <h3 class="panel-title">Gestão de Contas a Receber</h3>
-                    <div class="filter-bar">
-                        <input type="text" id="buscaReceber" class="filter-input" placeholder="🔍 Buscar cliente..." oninput="carregarDados()">
-                        <select id="filtroStatusReceber" class="filter-input" onchange="carregarDados()">
-                            <option value="TODOS">Todos os Status</option>
-                            <option value="PENDENTE">Pendente</option>
-                            <option value="PAGO">Pago</option>
-                            <option value="ATRASADO">Atrasado</option>
-                        </select>
-                        <select id="filtroCCReceber" class="filter-input" onchange="carregarDados()">
-                            <option value="TODOS">Todos os C. Custos</option>
-                            <option value="SERVIÇOS">Serviços</option>
-                            <option value="VENDAS">Vendas</option>
-                        </select>
-                        <button class="btn btn-success" onclick="abrirModalReceber()"><i class="fas fa-plus"></i> Nova Conta a Receber</button>
+                    <div class="panel-title">Lançamentos de Contas a Receber</div>
+                    <div style="display: flex; gap: 8px; flex-wrap: wrap;">
+                        <button class="btn btn-primary" onclick="abrirModalReceber()"><i class="fas fa-plus"></i> Novo Recebimento</button>
+                        <button class="btn btn-success" onclick="exportarCSV('receber')"><i class="fas fa-file-csv"></i> Exportar</button>
                     </div>
                 </div>
+
+                <div class="filter-bar" style="margin-bottom: 15px;">
+                    <input type="text" id="buscaReceber" class="filter-input" placeholder="Buscar cliente ou descrição..." oninput="carregarDados()">
+                    <select id="filtroStatusReceber" class="filter-input" onchange="carregarDados()">
+                        <option value="TODOS">Todos os Status</option>
+                        <option value="PENDENTE">PENDENTE</option>
+                        <option value="ATRASADO">ATRASADO</option>
+                        <option value="PAGO">PAGO</option>
+                    </select>
+                    <select id="filtroCCReceber" class="filter-input" onchange="carregarDados()">
+                        <option value="TODOS">Todas as Categorias</option>
+                        <option value="SERVIÇOS">SERVIÇOS</option>
+                        <option value="VENDAS">VENDAS</option>
+                    </select>
+                </div>
+
                 <div class="table-responsive">
                     <table>
-                        <thead><tr><th>Vencimento</th><th>Cliente</th><th>Descrição</th><th>Valor</th><th>Status</th><th>Centro Custo</th><th>Ações</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th>Vencimento</th>
+                                <th>Cliente</th>
+                                <th>Descrição</th>
+                                <th>Valor</th>
+                                <th>Status</th>
+                                <th>Categoria</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
                         <tbody id="tbReceber"></tbody>
                     </table>
                 </div>
             </div>
         </div>
 
-        <!-- TAB 4: ESTOQUE -->
+        <!-- TAB 4: ESTOQUE (PEÇAS) -->
         <div id="tab-estoque" class="tab-content">
             <div class="panel">
                 <div class="panel-header">
-                    <h3 class="panel-title">Controle de Peças e Produtos</h3>
-                    <div class="filter-bar">
-                        <input type="text" id="buscaEstoque" class="filter-input" placeholder="🔍 Buscar peça / SKU..." oninput="carregarDados()">
-                        <select id="filtroStatusEstoque" class="filter-input" onchange="carregarDados()">
-                            <option value="TODOS">Todos os Níveis de Estoque</option>
-                            <option value="BAIXO">Estoque Baixo / Crítico</option>
-                            <option value="NORMAL">Estoque Normal (OK)</option>
-                        </select>
-                        <button class="btn btn-primary" onclick="abrirModalEstoque()"><i class="fas fa-box-open"></i> Cadastrar Peça</button>
-                    </div>
+                    <div class="panel-title">Controle de Estoque de Peças</div>
+                    <button class="btn btn-primary" onclick="abrirModalEstoque()"><i class="fas fa-plus"></i> Cadastrar Peça</button>
                 </div>
+
+                <div class="filter-bar" style="margin-bottom: 15px;">
+                    <input type="text" id="buscaEstoque" class="filter-input" placeholder="Buscar por SKU ou peça..." oninput="carregarDados()">
+                    <select id="filtroStatusEstoque" class="filter-input" onchange="carregarDados()">
+                        <option value="TODOS">Todos os Níveis</option>
+                        <option value="NORMAL">Estoque Normal</option>
+                        <option value="BAIXO">Estoque Baixo</option>
+                    </select>
+                </div>
+
                 <div class="table-responsive">
                     <table>
-                        <thead><tr><th>SKU</th><th>Peça</th><th>Categoria</th><th>Qtd Atual</th><th>Qtd Mínima</th><th>Preço Custo</th><th>Preço Venda</th><th>Subtotal Custo</th><th>Ações</th></tr></thead>
+                        <thead>
+                            <tr>
+                                <th>SKU</th>
+                                <th>Peça / Descrição</th>
+                                <th>Categoria</th>
+                                <th>Qtd Atual</th>
+                                <th>Qtd Mín.</th>
+                                <th>Custo Un.</th>
+                                <th>Venda Un.</th>
+                                <th>Total Custo</th>
+                                <th>Ações</th>
+                            </tr>
+                        </thead>
                         <tbody id="tbEstoque"></tbody>
                     </table>
                 </div>
             </div>
         </div>
 
-        <!-- TAB 5: DRE -->
+        <!-- TAB 5: ANÁLISE DRE DUAL -->
         <div id="tab-dre" class="tab-content">
             <div class="panel">
                 <div class="panel-header">
-                    <h3 class="panel-title"><i class="fas fa-file-invoice-dollar"></i> Demonstrativo do Resultado do Exercício (DRE Dual)</h3>
-                    <div id="dreHealthBadge" class="status-badge pago" style="font-size: 13px; padding: 6px 14px;">
-                        <i class="fas fa-check-circle"></i> Operação Lucrativa
-                    </div>
+                    <div class="panel-title">Demonstrativo de Resultado do Exercício (DRE Regime Caixa x Competência)</div>
                 </div>
+
                 <div class="table-responsive">
                     <table>
                         <thead>
                             <tr>
-                                <th>Estrutura Contábil / Financeira</th>
-                                <th style="text-align: right; color: var(--success-color);">Realizado (Caixa)</th>
-                                <th style="text-align: right; color: #8e44ad;">Pendente</th>
-                                <th style="text-align: right; color: var(--info-color);">Projetado Total</th>
+                                <th>Linha do DRE</th>
+                                <th>Realizado (Caixa)</th>
+                                <th>Pendente</th>
+                                <th>Projetado (Competência)</th>
                             </tr>
                         </thead>
                         <tbody>
                             <tr>
-                                <td><strong>(+) Receita Bruta (Vendas / Serviços)</strong></td>
-                                <td style="text-align: right;" id="dreRecReal">R$ 0,00</td>
-                                <td style="text-align: right;" id="dreRecPend">R$ 0,00</td>
-                                <td style="text-align: right;" id="dreRecProj"><strong>R$ 0,00</strong></td>
+                                <td><strong>Receita Bruta Total</strong></td>
+                                <td id="dreRecReal">R$ 0,00</td>
+                                <td id="dreRecPend">R$ 0,00</td>
+                                <td id="dreRecProj">R$ 0,00</td>
                             </tr>
                             <tr>
-                                <td style="padding-left: 25px; color: #666;">(-) Custo de Peças / Material (CMV)</td>
-                                <td style="text-align: right; color: var(--danger-color);" id="dreCustoReal">R$ 0,00</td>
-                                <td style="text-align: right; color: var(--danger-color);" id="dreCustoPend">R$ 0,00</td>
-                                <td style="text-align: right; color: var(--danger-color);" id="dreCustoProj">R$ 0,00</td>
+                                <td>(-) Custos com Peças/Insumos</td>
+                                <td id="dreCustoReal">R$ 0,00</td>
+                                <td id="dreCustoPend">R$ 0,00</td>
+                                <td id="dreCustoProj">R$ 0,00</td>
                             </tr>
-                            <tr style="background-color: #fafafa; font-weight: bold;">
-                                <td>(=) Lucro Bruto Operacional</td>
-                                <td style="text-align: right;" id="dreLucroBrutoReal">R$ 0,00</td>
-                                <td style="text-align: right;" id="dreLucroBrutoPend">R$ 0,00</td>
-                                <td style="text-align: right;" id="dreLucroBrutoProj">R$ 0,00</td>
-                            </tr>
-                            <tr>
-                                <td style="padding-left: 25px; color: #666;">(-) Despesas Administrativas & Fixas</td>
-                                <td style="text-align: right; color: var(--danger-color);" id="dreDespFixaReal">R$ 0,00</td>
-                                <td style="text-align: right; color: var(--danger-color);" id="dreDespFixaPend">R$ 0,00</td>
-                                <td style="text-align: right; color: var(--danger-color);" id="dreDespFixaProj">R$ 0,00</td>
+                            <tr style="background:#f9f9f9; font-weight:bold;">
+                                <td>(=) Lucro Bruto</td>
+                                <td id="dreLucroBrutoReal">R$ 0,00</td>
+                                <td id="dreLucroBrutoPend">R$ 0,00</td>
+                                <td id="dreLucroBrutoProj">R$ 0,00</td>
                             </tr>
                             <tr>
-                                <td style="padding-left: 25px; color: #666;">(-) Despesas Pessoais / Retiradas</td>
-                                <td style="text-align: right; color: var(--danger-color);" id="dreDespPessReal">R$ 0,00</td>
-                                <td style="text-align: right; color: var(--danger-color);" id="dreDespPessPend">R$ 0,00</td>
-                                <td style="text-align: right; color: var(--danger-color);" id="dreDespPessProj">R$ 0,00</td>
-                            </tr>
-                            <tr style="background-color: #fffef2; font-size: 15px; font-weight: bold;">
-                                <td>(=) RESULTADO LÍQUIDO FINAL</td>
-                                <td style="text-align: right;" id="dreResLiquidoReal">R$ 0,00</td>
-                                <td style="text-align: right;" id="dreResLiquidoPend">R$ 0,00</td>
-                                <td style="text-align: right;" id="dreResLiquidoProj">R$ 0,00</td>
+                                <td>(-) Despesas Administrativas e Fixas</td>
+                                <td id="dreDespFixaReal">R$ 0,00</td>
+                                <td id="dreDespFixaPend">R$ 0,00</td>
+                                <td id="dreDespFixaProj">R$ 0,00</td>
                             </tr>
                             <tr>
-                                <td><strong>Margem Líquida de Lucro (%)</strong></td>
-                                <td style="text-align: right;" id="dreMargemReal"><strong>0.0%</strong></td>
-                                <td style="text-align: right;">-</td>
-                                <td style="text-align: right;" id="dreMargemProj"><strong>0.0%</strong></td>
+                                <td>(-) Despesas com Pessoal / Retiradas</td>
+                                <td id="dreDespPessReal">R$ 0,00</td>
+                                <td id="dreDespPessPend">R$ 0,00</td>
+                                <td id="dreDespPessProj">R$ 0,00</td>
+                            </tr>
+                            <tr style="background:#e8f8f5; font-weight:bold; font-size:15px;">
+                                <td>(=) Resultado Líquido Final</td>
+                                <td id="dreResLiquidoReal">R$ 0,00</td>
+                                <td id="dreResLiquidoPend">R$ 0,00</td>
+                                <td id="dreResLiquidoProj">R$ 0,00</td>
+                            </tr>
+                            <tr>
+                                <td>Margem Lucratividade (%)</td>
+                                <td id="dreMargemReal">0.0%</td>
+                                <td>-</td>
+                                <td id="dreMargemProj">0.0%</td>
                             </tr>
                         </tbody>
                     </table>
@@ -475,53 +527,62 @@
             </div>
         </div>
 
-        <!-- TAB 6: INTEGRAÇÕES & EXCEL -->
+        <!-- TAB 6: INTEGRAÇÕES / EXCEL -->
         <div id="tab-extensao" class="tab-content">
-            <div class="dashboard-grid">
-                <div class="panel">
-                    <div class="panel-header">
-                        <div class="panel-title"><i class="fas fa-file-excel" style="color:#2ecc71;"></i> Importação de Planilha Excel (.xlsx)</div>
-                    </div>
-                    <div class="form-group" style="margin-bottom: 15px;">
-                        <label>LIMITE DE IMPORTAÇÃO</label>
-                        <select id="excelImportLimit" class="form-control">
-                            <option value="ALL">Toda a planilha (Todos os registros)</option>
-                            <option value="50">Últimos 50 registros</option>
-                            <option value="100">Últimos 100 registros</option>
-                            <option value="200">Últimos 200 registros</option>
-                        </select>
-                    </div>
-                    <div class="form-group" style="margin-bottom: 15px;">
-                        <label>SELECIONE O ARQUIVO EXCEL</label>
-                        <input type="file" id="fileExcelInput" class="form-control" accept=".xlsx, .xls" onchange="importarPlanilhaExcel(event)">
-                    </div>
-                    <p style="font-size: 12px; color: #777;">
-                        <i class="fas fa-info-circle"></i> O leitor automático processa abas com o nome "PAGAR/SAIDA", "RECEBER/ENTRADA" e "ESTOQUE".
-                    </p>
-                    
-                    <button class="btn btn-danger" onclick="zerarTodoSistema()" style="padding: 12px; font-weight: bold; width: 100%; margin-top: 20px; justify-content: center; height: 44px;">
-                        <i class="fas fa-trash-alt"></i> Zerar Banco de Dados Antes de Importar
-                    </button>
+            <div class="panel">
+                <div class="panel-header">
+                    <div class="panel-title"><i class="fas fa-file-excel"></i> Importar / Exportar Dados</div>
                 </div>
 
-                <div class="panel">
-                    <div class="panel-header">
-                        <div class="panel-title"><i class="fas fa-database"></i> Backup & Exportação Manual</div>
+                <div style="display: flex; flex-direction: column; gap: 20px;">
+                    <!-- Seção de Importação de Planilhas -->
+                    <div style="background: #fdfdfd; border: 1px dashed #ccc; padding: 20px; border-radius: 8px;">
+                        <h4 style="margin-bottom: 10px; color: var(--primary-color);">Importar Planilha Excel (.xlsx)</h4>
+                        <p style="font-size: 13px; color: #666; margin-bottom: 15px;">
+                            O sistema detecta automaticamente as abas de Pagar, Receber e Estoque. Escolha o período desejado abaixo:
+                        </p>
+                        
+                        <div class="import-options" style="display: flex; gap: 15px; align-items: center; margin-bottom: 15px; flex-wrap: wrap;">
+                            <div>
+                                <label style="font-size: 11px; font-weight: bold; display: block; margin-bottom: 4px;">Período a Importar:</label>
+                                <select id="excelDateFilter" class="form-control" style="width: auto;">
+                                    <option value="ALL">Todo o Histórico</option>
+                                    <option value="30DAYS">Últimos 30 Dias</option>
+                                    <option value="ESTE_MES">Este Mês</option>
+                                    <option value="ESTE_ANO">Este Ano</option>
+                                </select>
+                            </div>
+
+                            <div>
+                                <label style="font-size: 11px; font-weight: bold; display: block; margin-bottom: 4px;">Limite de Registros:</label>
+                                <select id="excelImportLimit" class="form-control" style="width: auto;">
+                                    <option value="ALL">Todas as Linhas</option>
+                                    <option value="100">Últimas 100 Linhas</option>
+                                    <option value="500">Últimas 500 Linhas</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <input type="file" id="excelFileInput" accept=".xlsx, .xls" style="display: none;" onchange="importarPlanilhaExcel(event)">
+                        <button class="btn btn-primary" onclick="document.getElementById('excelFileInput').click();">
+                            <i class="fas fa-upload"></i> Selecionar Arquivo Excel
+                        </button>
                     </div>
-                    <div style="display: flex; flex-direction: column; gap: 12px;">
-                        <button class="btn btn-secondary" onclick="exportarBackupJSON()" style="padding: 10px; font-weight: bold; justify-content: center;">
-                            <i class="fas fa-download"></i> Baixar Backup Completo (JSON)
-                        </button>
-                        <label class="btn btn-warning" style="text-align: center; cursor: pointer; padding: 10px; font-weight: bold; display: flex; justify-content: center; margin: 0;">
-                            <i class="fas fa-upload"></i> Restaurar Backup JSON
-                            <input type="file" accept=".json" style="display: none;" onchange="importarBackupJSON(event)">
-                        </label>
-                        <button class="btn btn-success" onclick="exportarCSV('pagar')" style="padding: 10px; font-weight: bold; justify-content: center;">
-                            <i class="fas fa-file-csv"></i> Exportar Contas a Pagar (CSV)
-                        </button>
-                        <button class="btn btn-success" onclick="exportarCSV('receber')" style="padding: 10px; font-weight: bold; justify-content: center;">
-                            <i class="fas fa-file-csv"></i> Exportar Contas a Receber (CSV)
-                        </button>
+
+                    <!-- Seção de Backup em JSON -->
+                    <div style="background: #fdfdfd; border: 1px solid #eee; padding: 20px; border-radius: 8px;">
+                        <h4 style="margin-bottom: 10px; color: var(--primary-color);">Backup e Restauração de Segurança (JSON)</h4>
+                        <p style="font-size: 13px; color: #666; margin-bottom: 15px;">Faça download de uma cópia exata ou restaure um arquivo completo salvo anteriormente.</p>
+                        <div style="display: flex; gap: 10px; flex-wrap: wrap;">
+                            <button class="btn btn-secondary" onclick="exportarBackupJSON()"><i class="fas fa-download"></i> Baixar Backup JSON</button>
+                            <input type="file" id="jsonFileInput" accept=".json" style="display: none;" onchange="importarBackupJSON(event)">
+                            <button class="btn btn-warning" onclick="document.getElementById('jsonFileInput').click();"><i class="fas fa-undo"></i> Restaurar Backup JSON</button>
+                        </div>
+                    </div>
+
+                    <!-- Botão de Zerar o Banco -->
+                    <div style="border-top: 1px solid #f1f1f1; padding-top: 20px;">
+                        <button class="btn btn-danger" onclick="zerarTodoSistema()"><i class="fas fa-trash-alt"></i> Zerar Todo o Banco de Dados</button>
                     </div>
                 </div>
             </div>
@@ -529,60 +590,152 @@
 
     </div>
 
-    <!-- MODAIS -->
+    <!-- MODAIS DE CADASTRO -->
+
+    <!-- Modal Pagar -->
     <div id="modalPagar" class="modal">
         <div class="modal-content">
             <span class="close-modal" onclick="fecharModal('modalPagar')">&times;</span>
-            <h2 id="modalPagarTitle">Nova Conta a Pagar</h2>
-            <form onsubmit="salvarPagar(event)" class="form-grid">
+            <h3 id="modalPagarTitle" style="margin-bottom: 15px;">Nova Conta a Pagar</h3>
+            <form onsubmit="salvarPagar(event)">
                 <input type="hidden" id="pagarId">
-                <div class="form-group full"><label>Recebedor / Empresa</label><input type="text" id="pagarFornecedor" class="form-control" required></div>
-                <div class="form-group full"><label>Descrição</label><input type="text" id="pagarDesc" class="form-control" required></div>
-                <div class="form-group"><label>Valor (R$)</label><input type="number" step="0.01" id="pagarValor" class="form-control" required></div>
-                <div class="form-group"><label>Vencimento</label><input type="date" id="pagarVenc" class="form-control" required></div>
-                <div class="form-group"><label>Status</label><select id="pagarStatus" class="form-control"><option value="PENDENTE">PENDENTE</option><option value="PAGO">PAGO</option></select></div>
-                <div class="form-group"><label>Centro de Custo</label><select id="pagarCC" class="form-control"><option value="ADMINISTRATIVO">ADMINISTRATIVO</option><option value="PESSOAL">PESSOAL</option><option value="PEÇAS">PEÇAS</option></select></div>
-                <div class="form-group full"><label>É Despesa Fixa?</label><select id="pagarFixa" class="form-control"><option value="NAO">Não</option><option value="SIM">Sim</option></select></div>
-                <button type="submit" class="btn btn-danger full" style="grid-column: 1/-1; justify-content: center; height: 44px;">Salvar Conta a Pagar</button>
+                <div class="form-grid">
+                    <div class="form-group full">
+                        <label>Fornecedor / Empresa</label>
+                        <input type="text" id="pagarFornecedor" class="form-control" required>
+                    </div>
+                    <div class="form-group full">
+                        <label>Descrição</label>
+                        <input type="text" id="pagarDesc" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Valor (R$)</label>
+                        <input type="number" step="0.01" id="pagarValor" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Vencimento</label>
+                        <input type="date" id="pagarVenc" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="pagarStatus" class="form-control">
+                            <option value="PENDENTE">PENDENTE</option>
+                            <option value="PAGO">PAGO</option>
+                            <option value="ATRASADO">ATRASADO</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Categoria (Centro de Custo)</label>
+                        <select id="pagarCC" class="form-control">
+                            <option value="ADMINISTRATIVO">ADMINISTRATIVO</option>
+                            <option value="PESSOAL">PESSOAL</option>
+                            <option value="PEÇAS">PEÇAS</option>
+                        </select>
+                    </div>
+                    <div class="form-group full">
+                        <label>Despesa Recorrente / Fixa?</label>
+                        <select id="pagarFixa" class="form-control">
+                            <option value="NAO">Não</option>
+                            <option value="SIM">Sim (Replicar Mensalmente)</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="margin-top: 20px; text-align: right;">
+                    <button type="button" class="btn btn-secondary" onclick="fecharModal('modalPagar')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Lançamento</button>
+                </div>
             </form>
         </div>
     </div>
 
+    <!-- Modal Receber -->
     <div id="modalReceber" class="modal">
         <div class="modal-content">
             <span class="close-modal" onclick="fecharModal('modalReceber')">&times;</span>
-            <h2 id="modalReceberTitle">Nova Conta a Receber</h2>
-            <form onsubmit="salvarReceber(event)" class="form-grid">
+            <h3 id="modalReceberTitle" style="margin-bottom: 15px;">Nova Conta a Receber</h3>
+            <form onsubmit="salvarReceber(event)">
                 <input type="hidden" id="receberId">
-                <div class="form-group full"><label>Cliente</label><input type="text" id="receberCliente" class="form-control" required></div>
-                <div class="form-group full"><label>Descrição</label><input type="text" id="receberDesc" class="form-control" required></div>
-                <div class="form-group"><label>Valor (R$)</label><input type="number" step="0.01" id="receberValor" class="form-control" required></div>
-                <div class="form-group"><label>Vencimento</label><input type="date" id="receberVenc" class="form-control" required></div>
-                <div class="form-group"><label>Status</label><select id="receberStatus" class="form-control"><option value="PENDENTE">PENDENTE</option><option value="PAGO">PAGO</option></select></div>
-                <div class="form-group"><label>Centro de Custo</label><select id="receberCC" class="form-control"><option value="SERVIÇOS">SERVIÇOS</option><option value="VENDAS">VENDAS</option></select></div>
-                <button type="submit" class="btn btn-success full" style="grid-column: 1/-1; justify-content: center; height: 44px;">Salvar Conta a Receber</button>
+                <div class="form-grid">
+                    <div class="form-group full">
+                        <label>Cliente / Origem</label>
+                        <input type="text" id="receberCliente" class="form-control" required>
+                    </div>
+                    <div class="form-group full">
+                        <label>Descrição</label>
+                        <input type="text" id="receberDesc" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Valor (R$)</label>
+                        <input type="number" step="0.01" id="receberValor" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Vencimento</label>
+                        <input type="date" id="receberVenc" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Status</label>
+                        <select id="receberStatus" class="form-control">
+                            <option value="PENDENTE">PENDENTE</option>
+                            <option value="PAGO">PAGO</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Categoria</label>
+                        <select id="receberCC" class="form-control">
+                            <option value="SERVIÇOS">SERVIÇOS</option>
+                            <option value="VENDAS">VENDAS</option>
+                        </select>
+                    </div>
+                </div>
+                <div style="margin-top: 20px; text-align: right;">
+                    <button type="button" class="btn btn-secondary" onclick="fecharModal('modalReceber')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Lançamento</button>
+                </div>
             </form>
         </div>
     </div>
 
+    <!-- Modal Estoque -->
     <div id="modalEstoque" class="modal">
         <div class="modal-content">
             <span class="close-modal" onclick="fecharModal('modalEstoque')">&times;</span>
-            <h2 id="modalEstoqueTitle">Cadastrar Peça no Estoque</h2>
-            <form onsubmit="salvarEstoque(event)" class="form-grid">
+            <h3 id="modalEstoqueTitle" style="margin-bottom: 15px;">Cadastrar Peça no Estoque</h3>
+            <form onsubmit="salvarEstoque(event)">
                 <input type="hidden" id="estId">
-                <div class="form-group"><label>SKU / Código</label><input type="text" id="estSKU" class="form-control" required></div>
-                <div class="form-group"><label>Nome da Peça</label><input type="text" id="estNome" class="form-control" required></div>
-                <div class="form-group"><label>Qtd Atual</label><input type="number" id="estQtd" class="form-control" required></div>
-                <div class="form-group"><label>Qtd Mínima</label><input type="number" id="estMin" class="form-control" required></div>
-                <div class="form-group"><label>Preço Custo (R$)</label><input type="number" step="0.01" id="estCusto" class="form-control" required></div>
-                <div class="form-group"><label>Preço Venda (R$)</label><input type="number" step="0.01" id="estVenda" class="form-control" required></div>
-                <button type="submit" class="btn btn-primary" style="grid-column: 1/-1; justify-content: center; height: 44px;">Salvar Peça</button>
+                <div class="form-grid">
+                    <div class="form-group">
+                        <label>Código / SKU</label>
+                        <input type="text" id="estSKU" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Nome da Peça</label>
+                        <input type="text" id="estNome" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Qtd Inicial</label>
+                        <input type="number" id="estQtd" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Qtd Mínima Alerta</label>
+                        <input type="number" id="estMin" class="form-control" value="5" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Preço Custo Un. (R$)</label>
+                        <input type="number" step="0.01" id="estCusto" class="form-control" required>
+                    </div>
+                    <div class="form-group">
+                        <label>Preço Venda Un. (R$)</label>
+                        <input type="number" step="0.01" id="estVenda" class="form-control" required>
+                    </div>
+                </div>
+                <div style="margin-top: 20px; text-align: right;">
+                    <button type="button" class="btn btn-secondary" onclick="fecharModal('modalEstoque')">Cancelar</button>
+                    <button type="submit" class="btn btn-primary">Salvar Peça</button>
+                </div>
             </form>
         </div>
     </div>
 
-    <!-- SCRIPT DA APLICAÇÃO -->
     <script src="script.js"></script>
 </body>
 </html>
