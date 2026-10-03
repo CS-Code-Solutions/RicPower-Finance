@@ -97,7 +97,7 @@ function carregarDadosLocal() {
     carregarDados();
 }
 
-// LOGIN / LOGOUT
+// LOGIN / LOGOUT SEGURO
 function realizarLogin(e) {
     if (e) e.preventDefault();
     const email = document.getElementById('loginEmail').value.trim();
@@ -114,6 +114,7 @@ function realizarLogin(e) {
     if (isFirebaseConnected && auth) {
         auth.signInWithEmailAndPassword(email, senha)
             .then((userCredential) => {
+                localStorage.setItem('ric_logged', 'true');
                 document.getElementById('login-screen').style.display = 'none';
                 if (btnSubmit) {
                     btnSubmit.disabled = false;
@@ -134,22 +135,15 @@ function realizarLogin(e) {
                 }
             });
     } else {
-        if ((email === 'admin@richard.com' && senha === 'admin123') || (email === 'richard@ricpower.com' && senha === 'rpmel301')) {
-            localStorage.setItem('ric_logged', 'true');
-            document.getElementById('login-screen').style.display = 'none';
-            trocarAba('dashboard');
-            carregarDadosLocal();
-        } else {
-            if (alertBox) {
-                alertBox.style.display = 'block';
-                alertBox.style.background = '#f8d7da';
-                alertBox.style.color = '#721c24';
-                alertBox.innerText = 'Credenciais inválidas (Modo Local)!';
-            }
-        }
         if (btnSubmit) {
             btnSubmit.disabled = false;
             btnSubmit.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar no Sistema';
+        }
+        if (alertBox) {
+            alertBox.style.display = 'block';
+            alertBox.style.background = '#f8d7da';
+            alertBox.style.color = '#721c24';
+            alertBox.innerText = 'Serviço de autenticação indisponível. Verifique sua conexão com o Firebase.';
         }
     }
 }
@@ -524,7 +518,6 @@ function importarPlanilhaExcel(e) {
             let countReceber = 0;
             let countEstoque = 0;
 
-            // Sinônimos para Contas
             const sinFornecedor = ['FORNECEDOR', 'EMPRESA', 'RECEBEDOR', 'NOME', 'FORNECEDORA', 'RAZÃO SOCIAL', 'RAZAO SOCIAL'];
             const sinCliente = ['CLIENTE', 'PAGADOR', 'NOME', 'CLIENTA', 'RAZÃO SOCIAL', 'RAZAO SOCIAL'];
             const sinValor = ['VALOR A PAGAR', 'VALOR A RECEBER', 'VALOR', 'VALOR TOTAL', 'MONTANTE', 'VLR'];
@@ -533,7 +526,6 @@ function importarPlanilhaExcel(e) {
             const sinStatus = ['STATUS', 'SITUAÇÃO', 'SITUACAO', 'ESTADO', 'PAGO?'];
             const sinCC = ['CENTRO DE CUSTO', 'CATEGORIA', 'CC', 'CENTRO CUSTO', 'C. CUSTO'];
 
-            // Sinônimos para Estoque
             const sinSku = ['CÓDIGO', 'CODIGO', 'SKU', 'CÓD', 'COD'];
             const sinNomeItem = ['DESCRIÇÃO DO ITEM', 'DESCRICAO DO ITEM', 'NOME', 'PRODUTO', 'ITEM', 'DESCRIÇÃO', 'DESCRICAO'];
             const sinCatItem = ['CATEGORIA', 'CAT', 'GRUPO', 'TIPO'];
