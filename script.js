@@ -44,7 +44,6 @@ document.addEventListener('DOMContentLoaded', () => {
         auth.onAuthStateChanged((user) => {
             if (user) {
                 document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('userEmailDisplay').innerText = user.email;
                 trocarAba('dashboard');
                 iniciarEscutaFirebase();
             } else {
@@ -116,7 +115,6 @@ function realizarLogin(e) {
         auth.signInWithEmailAndPassword(email, senha)
             .then((userCredential) => {
                 document.getElementById('login-screen').style.display = 'none';
-                document.getElementById('userEmailDisplay').innerText = userCredential.user.email;
                 if (btnSubmit) {
                     btnSubmit.disabled = false;
                     btnSubmit.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar no Sistema';
