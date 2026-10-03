@@ -508,7 +508,7 @@ function renderGraficos(realIn, realOut, catPessoal = 0, catAdmin = 0, catPecas 
 
 // --- ZERAR TODO O BANCO DE DADOS E ARMAZENAMENTO LOCAL ---
 async function zerarTodoSistema() {
-    if (!confirm("⚠️️ ATENÇÃO: Deseja realmente apagar TODOS os registros de Contas a Pagar, Contas a Receber e Estoque? Esta ação não pode ser desfeita.")) {
+    if (!confirm("⚠️ ATENÇÃO: Deseja realmente apagar TODOS os registros de Contas a Pagar, Contas a Receber e Estoque? Esta ação não pode ser desfeita.")) {
         return;
     }
 
@@ -642,6 +642,33 @@ function validarDataImportacao(dataStr, filtroOpcao) {
     return true;
 }
 
+// --- CONVERSÃO DE DATAS DO EXCEL (FORMATO SERIAL / DATE OBJECT / STRING) ---
+function formatarDataExcel(valorData) {
+    if (!valorData) return new Date().toISOString().split('T')[0];
+
+    // Se já é uma string no formato YYYY-MM-DD
+    if (typeof valorData === 'string' && valorData.includes('-')) {
+        return valorData.trim();
+    }
+
+    // Se veio como um objeto Date (gerado pelo cellDates: true)
+    if (valorData instanceof Date) {
+        if (!isNaN(valorData.getTime())) {
+            return valorData.toISOString().split('T')[0];
+        }
+    }
+
+    // Se veio como número Serial do Excel (ex: 46042)
+    if (!isNaN(valorData) && Number(valorData) > 30000) {
+        const dataJS = new Date((Number(valorData) - (25567 + 2)) * 86400 * 1000);
+        if (!isNaN(dataJS.getTime())) {
+            return dataJS.toISOString().split('T')[0];
+        }
+    }
+
+    return String(valorData);
+}
+
 // --- IMPORTAÇÃO EXCEL MULTI-MODELO COM DETECÇÃO E FILTRO DE DATA AUTOMÁTICOS ---
 function importarPlanilhaExcel(e) {
     const file = e.target.files[0];
@@ -651,7 +678,8 @@ function importarPlanilhaExcel(e) {
     reader.onload = function(evt) {
         try {
             const data = new Uint8Array(evt.target.result);
-            const workbook = XLSX.read(data, { type: 'array' });
+            // Ativa o leitor de datas do SheetJS
+            const workbook = XLSX.read(data, { type: 'array', cellDates: true, dateNF: 'yyyy-mm-dd' });
 
             const limitSelect = document.getElementById('excelImportLimit');
             const limitValue = limitSelect ? limitSelect.value : 'ALL';
@@ -686,7 +714,7 @@ function importarPlanilhaExcel(e) {
             if (sheetPagarName) {
                 const sheetPagar = workbook.Sheets[sheetPagarName];
                 const linhaCabecalho = encontrarLinhaCabecalho(sheetPagar);
-                let rows = XLSX.utils.sheet_to_json(sheetPagar, { range: linhaCabecalho });
+                let rows = XLSX.utils.sheet_to_json(sheetPagar, { range: linhaCabecalho, raw: false });
 
                 if (limitValue !== 'ALL') rows = rows.slice(-parseInt(limitValue, 10));
 
@@ -697,7 +725,8 @@ function importarPlanilhaExcel(e) {
                     if (typeof valor === 'string') valor = parseFloat(valor.replace('R$', '').replace(/\./g, '').replace(',', '.').trim());
                     valor = parseFloat(valor) || 0;
 
-                    const dataVenc = extrairValorPorSinonimos(row, sinVenc) || new Date().toISOString().split('T')[0];
+                    const rawVenc = extrairValorPorSinonimos(row, sinVenc);
+                    const dataVenc = formatarDataExcel(rawVenc);
 
                     if (valor > 0 && validarDataImportacao(dataVenc, dateFilterValue)) {
                         const newId = 'imp_p_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
@@ -728,7 +757,7 @@ function importarPlanilhaExcel(e) {
             if (sheetReceberName) {
                 const sheetReceber = workbook.Sheets[sheetReceberName];
                 const linhaCabecalho = encontrarLinhaCabecalho(sheetReceber);
-                let rows = XLSX.utils.sheet_to_json(sheetReceber, { range: linhaCabecalho });
+                let rows = XLSX.utils.sheet_to_json(sheetReceber, { range: linhaCabecalho, raw: false });
 
                 if (limitValue !== 'ALL') rows = rows.slice(-parseInt(limitValue, 10));
 
@@ -739,7 +768,8 @@ function importarPlanilhaExcel(e) {
                     if (typeof valor === 'string') valor = parseFloat(valor.replace('R$', '').replace(/\./g, '').replace(',', '.').trim());
                     valor = parseFloat(valor) || 0;
 
-                    const dataVenc = extrairValorPorSinonimos(row, sinVenc) || new Date().toISOString().split('T')[0];
+                    const rawVenc = extrairValorPorSinonimos(row, sinVenc);
+                    const dataVenc = formatarDataExcel(rawVenc);
 
                     if (valor > 0 && validarDataImportacao(dataVenc, dateFilterValue)) {
                         const newId = 'imp_r_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
@@ -769,7 +799,7 @@ function importarPlanilhaExcel(e) {
             if (sheetEstoqueName) {
                 const sheetEstoque = workbook.Sheets[sheetEstoqueName];
                 const linhaCabecalho = encontrarLinhaCabecalho(sheetEstoque);
-                let rows = XLSX.utils.sheet_to_json(sheetEstoque, { range: linhaCabecalho });
+                let rows = XLSX.utils.sheet_to_json(sheetEstoque, { range: linhaCabecalho, raw: false });
 
                 if (limitValue !== 'ALL') rows = rows.slice(-parseInt(limitValue, 10));
 
