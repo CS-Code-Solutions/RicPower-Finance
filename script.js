@@ -178,9 +178,10 @@ function trocarAba(nomeAba, elemento) {
         elemento.classList.add('active');
     }
 
+    // OTIMIZAÇÃO MOBILE: Fecha a sidebar automaticamente ao trocar de aba no smartphone
     const sidebar = document.getElementById('sidebar');
     const overlay = document.querySelector('.sidebar-overlay');
-    if (sidebar && window.innerWidth <= 768) {
+    if (sidebar && sidebar.classList.contains('active')) {
         sidebar.classList.remove('active');
         if (overlay) overlay.classList.remove('active');
     }
@@ -466,6 +467,38 @@ function renderGraficos(realIn, realOut, catPessoal = 0, catAdmin = 0, catPecas 
             },
             options: { responsive: true }
         });
+    }
+}
+
+// --- ZERAR TODO O BANCO DE DADOS E ARMAZENAMENTO LOCAL ---
+async function zerarTodoSistema() {
+    if (!confirm("⚠️ ATENÇÃO: Deseja realmente apagar TODOS os registros de Contas a Pagar, Contas a Receber e Estoque? Esta ação não pode ser desfeita.")) {
+        return;
+    }
+
+    try {
+        if (isFirebaseConnected && db) {
+            const colecoes = ["pagar", "receber", "estoque"];
+            for (const col of colecoes) {
+                const snapshot = await db.collection(col).get();
+                const batch = db.batch();
+                snapshot.docs.forEach(doc => batch.delete(doc.ref));
+                await batch.commit();
+            }
+        }
+
+        dbPagar = [];
+        dbReceber = [];
+        dbEstoque = [];
+        localStorage.removeItem('ric_pagar');
+        localStorage.removeItem('ric_receber');
+        localStorage.removeItem('ric_estoque');
+
+        carregarDados();
+        alert("O banco de dados foi totalmente zerado! Você já pode realizar uma nova importação limpa.");
+    } catch (err) {
+        console.error("Erro ao zerar banco:", err);
+        alert("Erro ao limpar dados no Firebase. Verifique se possui conexão e permissões ativas.");
     }
 }
 
