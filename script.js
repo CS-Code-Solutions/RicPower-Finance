@@ -40,7 +40,6 @@ try {
 
 // INICIALIZAÇÃO E SESSÃO
 document.addEventListener('DOMContentLoaded', () => {
-    // Carrega dados locais imediatamente para evitar tela em branco ao atualizar
     carregarDadosLocal(false);
 
     if (auth) {
@@ -509,7 +508,7 @@ function renderGraficos(realIn, realOut, catPessoal = 0, catAdmin = 0, catPecas 
 
 // --- ZERAR TODO O BANCO DE DADOS E ARMAZENAMENTO LOCAL ---
 async function zerarTodoSistema() {
-    if (!confirm("⚠️ ATENÇÃO: Deseja realmente apagar TODOS os registros de Contas a Pagar, Contas a Receber e Estoque? Esta ação não pode ser desfeita.")) {
+    if (!confirm("⚠️️ ATENÇÃO: Deseja realmente apagar TODOS os registros de Contas a Pagar, Contas a Receber e Estoque? Esta ação não pode ser desfeita.")) {
         return;
     }
 
@@ -615,7 +614,35 @@ function encontrarLinhaCabecalho(sheet) {
     return 0;
 }
 
-// --- IMPORTAÇÃO EXCEL MULTI-MODELO COM DETECÇÃO AUTOMÁTICA ---
+// --- AUXILIAR DE FILTRO DE DATA NA IMPORTAÇÃO EXCEL ---
+function validarDataImportacao(dataStr, filtroOpcao) {
+    if (!filtroOpcao || filtroOpcao === 'ALL' || !dataStr) return true;
+
+    const dataItem = new Date(dataStr + 'T00:00:00');
+    if (isNaN(dataItem.getTime())) return true;
+
+    const hoje = new Date();
+    hoje.setHours(23, 59, 59, 999);
+
+    if (filtroOpcao === '30DAYS') {
+        const limite30Dias = new Date();
+        limite30Dias.setDate(hoje.getDate() - 30);
+        limite30Dias.setHours(0, 0, 0, 0);
+        return dataItem >= limite30Dias && dataItem <= hoje;
+    }
+
+    if (filtroOpcao === 'ESTE_MES') {
+        return dataItem.getMonth() === hoje.getMonth() && dataItem.getFullYear() === hoje.getFullYear();
+    }
+
+    if (filtroOpcao === 'ESTE_ANO') {
+        return dataItem.getFullYear() === hoje.getFullYear();
+    }
+
+    return true;
+}
+
+// --- IMPORTAÇÃO EXCEL MULTI-MODELO COM DETECÇÃO E FILTRO DE DATA AUTOMÁTICOS ---
 function importarPlanilhaExcel(e) {
     const file = e.target.files[0];
     if (!file) return;
@@ -628,6 +655,9 @@ function importarPlanilhaExcel(e) {
 
             const limitSelect = document.getElementById('excelImportLimit');
             const limitValue = limitSelect ? limitSelect.value : 'ALL';
+
+            const dateFilterSelect = document.getElementById('excelDateFilter');
+            const dateFilterValue = dateFilterSelect ? dateFilterSelect.value : 'ALL';
 
             let countPagar = 0;
             let countReceber = 0;
@@ -667,7 +697,9 @@ function importarPlanilhaExcel(e) {
                     if (typeof valor === 'string') valor = parseFloat(valor.replace('R$', '').replace(/\./g, '').replace(',', '.').trim());
                     valor = parseFloat(valor) || 0;
 
-                    if (valor > 0) {
+                    const dataVenc = extrairValorPorSinonimos(row, sinVenc) || new Date().toISOString().split('T')[0];
+
+                    if (valor > 0 && validarDataImportacao(dataVenc, dateFilterValue)) {
                         const newId = 'imp_p_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
                         const statusLido = String(extrairValorPorSinonimos(row, sinStatus) || 'PENDENTE').toUpperCase();
                         
@@ -675,7 +707,7 @@ function importarPlanilhaExcel(e) {
                             fornecedor: String(fornecedor),
                             desc: String(extrairValorPorSinonimos(row, sinDesc) || 'Importado via Excel'),
                             valor: valor,
-                            venc: extrairValorPorSinonimos(row, sinVenc) || new Date().toISOString().split('T')[0],
+                            venc: dataVenc,
                             status: statusLido.includes('PAG') ? 'PAGO' : 'PENDENTE',
                             cc: String(extrairValorPorSinonimos(row, sinCC) || 'ADMINISTRATIVO'),
                             fixa: false
@@ -707,7 +739,9 @@ function importarPlanilhaExcel(e) {
                     if (typeof valor === 'string') valor = parseFloat(valor.replace('R$', '').replace(/\./g, '').replace(',', '.').trim());
                     valor = parseFloat(valor) || 0;
 
-                    if (valor > 0) {
+                    const dataVenc = extrairValorPorSinonimos(row, sinVenc) || new Date().toISOString().split('T')[0];
+
+                    if (valor > 0 && validarDataImportacao(dataVenc, dateFilterValue)) {
                         const newId = 'imp_r_' + Date.now() + '_' + Math.floor(Math.random() * 10000);
                         const statusLido = String(extrairValorPorSinonimos(row, sinStatus) || 'PENDENTE').toUpperCase();
 
@@ -715,7 +749,7 @@ function importarPlanilhaExcel(e) {
                             cliente: String(cliente),
                             desc: String(extrairValorPorSinonimos(row, sinDesc) || 'Importado via Excel'),
                             valor: valor,
-                            venc: extrairValorPorSinonimos(row, sinVenc) || new Date().toISOString().split('T')[0],
+                            venc: dataVenc,
                             status: statusLido.includes('PAG') ? 'PAGO' : 'PENDENTE',
                             cc: String(extrairValorPorSinonimos(row, sinCC) || 'SERVIÇOS')
                         };
