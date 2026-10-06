@@ -43,6 +43,10 @@ try {
 
 // INICIALIZAÇÃO E SESSÃO
 document.addEventListener('DOMContentLoaded', () => {
+    // Carrega o tema salvo do usuário (Padrão: escuro)
+    const temaSalvo = localStorage.getItem('ric_theme') || 'dark';
+    aplicarTema(temaSalvo);
+
     carregarDadosLocal(false);
 
     if (auth) {
@@ -59,6 +63,29 @@ document.addEventListener('DOMContentLoaded', () => {
         verificarModoLocal();
     }
 });
+
+// --- GERENCIADOR DE TEMAS (MODO CLARO E ESCURO) ---
+function alternarTema() {
+    const temaAtual = document.documentElement.getAttribute('data-theme') === 'light' ? 'light' : 'dark';
+    const novoTema = temaAtual === 'dark' ? 'light' : 'dark';
+    aplicarTema(novoTema);
+}
+
+function aplicarTema(tema) {
+    if (tema === 'light') {
+        document.documentElement.setAttribute('data-theme', 'light');
+        if (document.getElementById('themeIcon')) document.getElementById('themeIcon').className = 'fas fa-sun';
+        if (document.getElementById('themeText')) document.getElementById('themeText').innerText = 'Modo Claro';
+    } else {
+        document.documentElement.removeAttribute('data-theme');
+        if (document.getElementById('themeIcon')) document.getElementById('themeIcon').className = 'fas fa-moon';
+        if (document.getElementById('themeText')) document.getElementById('themeText').innerText = 'Modo Escuro';
+    }
+    localStorage.setItem('ric_theme', tema);
+    
+    // Recarrega os dados e atualiza os gráficos com as cores do novo tema
+    if (typeof carregarDados === 'function') carregarDados();
+}
 
 function verificarModoLocal() {
     if (localStorage.getItem('ric_logged') === 'true') {
@@ -537,9 +564,15 @@ function renderTabelas(pagarList = dbPagar, receberList = dbReceber) {
     }
 }
 
+// --- RENDERIZAÇÃO DE GRÁFICOS (CHART.JS) COM SUPORTE A TEMAS ---
 function renderGraficos(realIn, realOut, catPessoal = 0, catAdmin = 0, catPecas = 0) {
     if (typeof Chart === 'undefined') return;
 
+    const isLight = document.documentElement.getAttribute('data-theme') === 'light';
+    const textColor = isLight ? '#2c3e50' : '#e0e0e0';
+    const gridColor = isLight ? '#e2e8f0' : '#333333';
+
+    // 1. Gráfico de Barra: Fluxo de Caixa Realizado
     const elFluxo = document.getElementById('chartFluxoCaixa');
     if (elFluxo) {
         const ctxFluxo = elFluxo.getContext('2d');
@@ -548,12 +581,27 @@ function renderGraficos(realIn, realOut, catPessoal = 0, catAdmin = 0, catPecas 
             type: 'bar',
             data: {
                 labels: ['Entradas Realizadas', 'Saídas Realizadas'],
-                datasets: [{ label: 'Valores em R$', data: [realIn, realOut], backgroundColor: ['#2ecc71', '#e74c3c'] }]
+                datasets: [{ 
+                    label: 'Valores em R$', 
+                    data: [realIn, realOut], 
+                    backgroundColor: ['#2ecc71', '#e74c3c'],
+                    borderRadius: 6
+                }]
             },
-            options: { responsive: true }
+            options: { 
+                responsive: true,
+                plugins: {
+                    legend: { labels: { color: textColor } }
+                },
+                scales: {
+                    x: { ticks: { color: textColor }, grid: { color: gridColor } },
+                    y: { ticks: { color: textColor }, grid: { color: gridColor } }
+                }
+            }
         });
     }
 
+    // 2. Gráfico Rosca: Distribuição de Despesas por Categoria
     const elCat = document.getElementById('chartCategorias');
     if (elCat) {
         const ctxCat = elCat.getContext('2d');
@@ -562,9 +610,19 @@ function renderGraficos(realIn, realOut, catPessoal = 0, catAdmin = 0, catPecas 
             type: 'doughnut',
             data: {
                 labels: ['Pessoal', 'Administrativo', 'Peças'],
-                datasets: [{ data: [catPessoal, catAdmin, catPecas], backgroundColor: ['#FFD500', '#111111', '#e74c3c'] }]
+                datasets: [{ 
+                    data: [catPessoal, catAdmin, catPecas], 
+                    backgroundColor: ['#FFD500', '#3498db', '#e74c3c'],
+                    borderWidth: 2,
+                    borderColor: isLight ? '#ffffff' : '#1e1e1e'
+                }]
             },
-            options: { responsive: true }
+            options: { 
+                responsive: true,
+                plugins: {
+                    legend: { labels: { color: textColor } }
+                }
+            }
         });
     }
 }
