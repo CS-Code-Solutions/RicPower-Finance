@@ -356,7 +356,15 @@ body {
     height: 100vh; 
     width: 100%; 
 }
-
+/* Oculta o conteúdo principal por padrão para evitar o flash ao carregar */
+.main-content { 
+    flex: 1; 
+    padding: 30px; 
+    overflow-y: auto; 
+    height: 100vh; 
+    width: 100%; 
+    display: none; /* <-- ADICIONE ESTA LINHA */
+}
 .header { 
     display: flex; 
     justify-content: space-between; 
