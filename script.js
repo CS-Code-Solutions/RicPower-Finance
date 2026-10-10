@@ -1366,3 +1366,121 @@ async function realizarLoginGoogle() {
         }
     }
 }
+// --- AUTENTICAÇÃO E SESSÃO EXCLUSIVA GOOGLE ---
+document.addEventListener('DOMContentLoaded', () => {
+    const temaSalvo = localStorage.getItem('ric_theme') || 'dark';
+    aplicarTema(temaSalvo);
+
+    carregarDadosLocal(false);
+
+    if (auth) {
+        auth.onAuthStateChanged(async (user) => {
+            if (user) {
+                const userEmail = (user.email || '').toLowerCase();
+                const autorizado = await verificarEmailAutorizado(userEmail);
+
+                if (autorizado) {
+                    document.getElementById('login-screen').style.display = 'none';
+                    trocarAba('dashboard');
+                    iniciarEscutaFirebase();
+                } else {
+                    await auth.signOut();
+                    localStorage.removeItem('ric_logged');
+                    exibirErroLogin('Acesso negado: E-mail não autorizado.');
+                }
+            } else {
+                verificarModoLocal();
+            }
+        });
+    } else {
+        verificarModoLocal();
+    }
+});
+
+// CONSULTA WHITELIST NO FIRESTORE (laser_expert_data -> rg_allowed_emails)
+async function verificarEmailAutorizado(email) {
+    if (!db || !email) return false;
+    try {
+        const docRef = await db.collection("laser_expert_data").doc("rg_allowed_emails").get();
+        if (docRef.exists) {
+            const data = docRef.data();
+            const allowedList = Array.isArray(data.content) ? data.content.map(e => String(e).toLowerCase()) : [];
+            return allowedList.includes(email);
+        }
+        return false;
+    } catch (err) {
+        console.error("Erro ao consultar whitelist de e-mails:", err);
+        return false;
+    }
+}
+
+// LOGIN VIA POPUP DO GOOGLE
+async function realizarLoginGoogle() {
+    if (!isFirebaseConnected || !auth) {
+        alert("Serviço de autenticação indisponível. Verifique sua conexão com o Firebase.");
+        return;
+    }
+
+    const provider = new firebase.auth.GoogleAuthProvider();
+    const alertBox = document.getElementById('loginAlert');
+    const btnGoogle = document.getElementById('btnGoogleLogin');
+
+    if (alertBox) alertBox.style.display = 'none';
+    if (btnGoogle) {
+        btnGoogle.disabled = true;
+        btnGoogle.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Autenticando...';
+    }
+
+    try {
+        const result = await auth.signInWithPopup(provider);
+        const userEmail = (result.user.email || '').toLowerCase();
+        
+        const eAutorizado = await verificarEmailAutorizado(userEmail);
+
+        if (!eAutorizado) {
+            await auth.signOut();
+            localStorage.removeItem('ric_logged');
+            
+            if (btnGoogle) {
+                btnGoogle.disabled = false;
+                btnGoogle.innerHTML = '<i class="fab fa-google"></i> Entrar com o Google';
+            }
+            exibirErroLogin('Acesso negado: Este e-mail não possui permissão no sistema.');
+            return;
+        }
+
+        localStorage.setItem('ric_logged', 'true');
+        document.getElementById('login-screen').style.display = 'none';
+        if (btnGoogle) {
+            btnGoogle.disabled = false;
+            btnGoogle.innerHTML = '<i class="fab fa-google"></i> Entrar com o Google';
+        }
+        trocarAba('dashboard');
+
+    } catch (error) {
+        console.error("Erro no login com Google:", error);
+        if (btnGoogle) {
+            btnGoogle.disabled = false;
+            btnGoogle.innerHTML = '<i class="fab fa-google"></i> Entrar com o Google';
+        }
+        if (error.code !== 'auth/popup-closed-by-user') {
+            exibirErroLogin('Falha ao autenticar com a conta Google.');
+        }
+    }
+}
+
+function exibirErroLogin(mensagem) {
+    const alertBox = document.getElementById('loginAlert');
+    if (alertBox) {
+        alertBox.style.display = 'block';
+        alertBox.style.background = '#f8d7da';
+        alertBox.style.color = '#721c24';
+        alertBox.innerText = mensagem;
+    }
+}
+
+function fazerLogout() {
+    if (auth) auth.signOut();
+    localStorage.removeItem('ric_logged');
+    document.getElementById('login-screen').style.display = 'flex';
+}
