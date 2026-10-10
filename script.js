@@ -49,35 +49,35 @@ document.addEventListener('DOMContentLoaded', () => {
 
     carregarDadosLocal(false);
 
+    const loginScreen = document.getElementById('login-screen');
+
     if (auth) {
         auth.onAuthStateChanged(async (user) => {
             if (user) {
-                const userEmail = (user.email || '').toLowerCase().trim();
-                const autorizado = await verificarEmailAutorizado(userEmail);
+                try {
+                    const userEmail = (user.email || '').toLowerCase().trim();
+                    const autorizado = await verificarEmailAutorizado(userEmail);
 
-                if (autorizado) {
-                    const loginScreen = document.getElementById('login-screen');
-                    if (loginScreen) loginScreen.style.display = 'none';
-                    
-                    trocarAba('dashboard');
-                    iniciarEscutaFirebase();
-                } else {
-                    await auth.signOut();
-                    localStorage.removeItem('ric_logged');
-                    
-                    const loginScreen = document.getElementById('login-screen');
+                    if (autorizado) {
+                        if (loginScreen) loginScreen.style.display = 'none';
+                        trocarAba('dashboard');
+                        iniciarEscutaFirebase();
+                    } else {
+                        await auth.signOut();
+                        localStorage.removeItem('ric_logged');
+                        if (loginScreen) loginScreen.style.display = 'flex';
+                        exibirErroLogin(`Acesso negado: O e-mail (${userEmail}) não possui permissão no sistema.`);
+                    }
+                } catch (err) {
+                    console.error("Erro durante verificação de autorização:", err);
                     if (loginScreen) loginScreen.style.display = 'flex';
-                    
-                    exibirErroLogin(`Acesso negado: O e-mail (${userEmail}) não possui permissão no sistema.`);
                 }
             } else {
                 localStorage.removeItem('ric_logged');
-                const loginScreen = document.getElementById('login-screen');
                 if (loginScreen) loginScreen.style.display = 'flex';
             }
         });
     } else {
-        const loginScreen = document.getElementById('login-screen');
         if (loginScreen) loginScreen.style.display = 'flex';
     }
 });
@@ -213,8 +213,11 @@ function verificarModoLocal() {
 
 function iniciarEscutaFirebase() {
     if (isFirebaseConnected && db) {
-        document.getElementById('syncBadge').className = 'sync-badge online';
-        document.getElementById('syncBadge').innerHTML = '<i class="fas fa-wifi"></i> Nuvem Sincronizada';
+        const badge = document.getElementById('syncBadge');
+        if (badge) {
+            badge.className = 'sync-badge online';
+            badge.innerHTML = '<i class="fas fa-wifi"></i> Nuvem Sincronizada';
+        }
 
         db.collection("pagar").onSnapshot(snapshot => {
             dbPagar = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
