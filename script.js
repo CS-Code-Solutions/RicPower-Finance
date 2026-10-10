@@ -41,7 +41,7 @@ try {
     isFirebaseConnected = false;
 }
 
-// INICIALIZAÇÃO E SESSÃO EXCLUSIVA GOOGLE
+// --- INICIALIZAÇÃO E SESSÃO EXCLUSIVA GOOGLE ---
 document.addEventListener('DOMContentLoaded', () => {
     // Carrega o tema salvo do usuário (Padrão: escuro)
     const temaSalvo = localStorage.getItem('ric_theme') || 'dark';
@@ -56,23 +56,29 @@ document.addEventListener('DOMContentLoaded', () => {
                 const autorizado = await verificarEmailAutorizado(userEmail);
 
                 if (autorizado) {
-                    document.getElementById('login-screen').style.display = 'none';
+                    const loginScreen = document.getElementById('login-screen');
+                    if (loginScreen) loginScreen.style.display = 'none';
+                    
                     trocarAba('dashboard');
                     iniciarEscutaFirebase();
                 } else {
                     await auth.signOut();
                     localStorage.removeItem('ric_logged');
-                    document.getElementById('login-screen').style.display = 'flex';
+                    
+                    const loginScreen = document.getElementById('login-screen');
+                    if (loginScreen) loginScreen.style.display = 'flex';
+                    
                     exibirErroLogin(`Acesso negado: O e-mail (${userEmail}) não possui permissão no sistema.`);
                 }
             } else {
-                document.getElementById('login-screen').style.display = 'flex';
-                verificarModoLocal();
+                localStorage.removeItem('ric_logged');
+                const loginScreen = document.getElementById('login-screen');
+                if (loginScreen) loginScreen.style.display = 'flex';
             }
         });
     } else {
-        document.getElementById('login-screen').style.display = 'flex';
-        verificarModoLocal();
+        const loginScreen = document.getElementById('login-screen');
+        if (loginScreen) loginScreen.style.display = 'flex';
     }
 });
 
@@ -127,13 +133,18 @@ async function realizarLoginGoogle() {
                 btnGoogle.disabled = false;
                 btnGoogle.innerHTML = '<i class="fab fa-google"></i> Entrar com o Google';
             }
-            document.getElementById('login-screen').style.display = 'flex';
+            
+            const loginScreen = document.getElementById('login-screen');
+            if (loginScreen) loginScreen.style.display = 'flex';
+            
             exibirErroLogin(`Acesso negado: O e-mail (${userEmail}) não possui permissão no sistema.`);
             return;
         }
 
         localStorage.setItem('ric_logged', 'true');
-        document.getElementById('login-screen').style.display = 'none';
+        const loginScreen = document.getElementById('login-screen');
+        if (loginScreen) loginScreen.style.display = 'none';
+        
         if (btnGoogle) {
             btnGoogle.disabled = false;
             btnGoogle.innerHTML = '<i class="fab fa-google"></i> Entrar com o Google';
@@ -146,7 +157,10 @@ async function realizarLoginGoogle() {
             btnGoogle.disabled = false;
             btnGoogle.innerHTML = '<i class="fab fa-google"></i> Entrar com o Google';
         }
-        document.getElementById('login-screen').style.display = 'flex';
+        
+        const loginScreen = document.getElementById('login-screen');
+        if (loginScreen) loginScreen.style.display = 'flex';
+        
         if (error.code !== 'auth/popup-closed-by-user') {
             exibirErroLogin('Falha ao autenticar com a conta Google.');
         }
@@ -166,7 +180,8 @@ function exibirErroLogin(mensagem) {
 function fazerLogout() {
     if (auth) auth.signOut();
     localStorage.removeItem('ric_logged');
-    document.getElementById('login-screen').style.display = 'flex';
+    const loginScreen = document.getElementById('login-screen');
+    if (loginScreen) loginScreen.style.display = 'flex';
 }
 
 // --- GERENCIADOR DE TEMAS (MODO CLARO E ESCURO) ---
@@ -188,16 +203,12 @@ function aplicarTema(tema) {
     }
     localStorage.setItem('ric_theme', tema);
     
-    // Recarrega os dados e atualiza os gráficos com as cores do novo tema
     if (typeof carregarDados === 'function') carregarDados();
 }
 
 function verificarModoLocal() {
-    if (localStorage.getItem('ric_logged') === 'true') {
-        document.getElementById('login-screen').style.display = 'none';
-        trocarAba('dashboard');
-        carregarDadosLocal(true);
-    }
+    const loginScreen = document.getElementById('login-screen');
+    if (loginScreen) loginScreen.style.display = 'flex';
 }
 
 function iniciarEscutaFirebase() {
@@ -329,7 +340,7 @@ function filtrarPorPeriodo(item) {
     return true;
 }
 
-// --- CORRIGIR REGISTROS ANTIGOS COM DATA SERIAL NO BANCO DE DADOS (OTIMIZADO COM BATCH) ---
+// --- CORRIGIR REGISTROS ANTIGOS COM DATA SERIAL NO BANCO DE DADOS ---
 async function corrigirDatasRegistrosAntigos() {
     if (jaCorrigiuDatas) return;
     jaCorrigiuDatas = true;
