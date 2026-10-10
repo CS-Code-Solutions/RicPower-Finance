@@ -48,50 +48,25 @@
                 <button type="submit" id="btnLoginSubmit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 12px; font-size: 15px; margin-bottom: 20px; height: 44px;">
                     <i class="fas fa-sign-in-alt"></i> Entrar no Sistema
                 </button>
-                <!-- TELA DE LOGIN -->
+<!-- TELA DE LOGIN (EXCLUSIVO GOOGLE) -->
 <div id="login-screen">
     <div class="login-card">
         <div class="logo">
             <img src="logo.png" alt="RICPOWER" class="logo-img" onerror="this.onerror=null; this.src='https://placehold.co/300x80/111111/FFD500?text=RICPOWER';">
         </div>
-        <p style="margin-bottom: 20px; font-size: 14px; color: #aaa;">Painel Restrito de Gestão</p>
-        <div id="loginAlert" class="login-alert" style="display:none; margin-bottom:15px; padding:10px; border-radius:6px; font-size:13px; font-weight:bold;"></div>
+        <p style="margin-bottom: 25px; font-size: 14px; color: #aaaaaa;">Painel Restrito de Gestão</p>
         
-        <form onsubmit="realizarLogin(event)">
-            <div style="margin-bottom: 15px; text-align: left;">
-                <label style="font-size: 11px; text-transform: uppercase; font-weight: bold; color: #ccc;">E-mail</label>
-                <input type="email" id="loginEmail" class="form-control" style="background: #2b2b2b; color: white; border-color: #444;" placeholder="seu.email@dominio.com" required>
-            </div>
-            <div style="margin-bottom: 20px; text-align: left;">
-                <label style="font-size: 11px; text-transform: uppercase; font-weight: bold; color: #ccc;">Senha</label>
-                <input type="password" id="loginSenha" class="form-control" style="background: #2b2b2b; color: white; border-color: #444;" placeholder="Sua senha" required>
-            </div>
-            <button type="submit" id="btnLoginSubmit" class="btn btn-primary" style="width: 100%; justify-content: center; padding: 12px; font-size: 15px; height: 44px;">
-                <i class="fas fa-sign-in-alt"></i> Entrar no Sistema
-            </button>
-        </form>
-
-        <!-- DIVISOR E BOTÃO GOOGLE -->
-        <div class="login-divider">
-            <span>ou</span>
-        </div>
-
+        <div id="loginAlert" class="login-alert" style="display:none; margin-bottom:20px; padding:12px; border-radius:6px; font-size:13px; font-weight:600;"></div>
+        
         <button type="button" id="btnGoogleLogin" class="btn-google-login" onclick="realizarLoginGoogle()">
             <i class="fab fa-google"></i> Entrar com o Google
         </button>
 
-        <div style="font-size: 12px; color: #888; letter-spacing: 0.5px; margin-top: 20px;">
+        <div style="font-size: 12px; color: #888888; letter-spacing: 0.5px; margin-top: 30px;">
             Powered by <strong style="color: var(--accent-color);">CS Code Solutions</strong>
         </div>
     </div>
 </div>
-            </form>
-            <div style="font-size: 12px; color: #888; letter-spacing: 0.5px;">
-                Powered by <strong style="color: var(--accent-color);">CS Code Solutions</strong>
-            </div>
-        </div>
-    </div>
-
     <!-- SIDEBAR DE NAVEGAÇÃO -->
     <div class="sidebar" id="sidebar">
         <div class="logo">
@@ -111,7 +86,9 @@
             </button>
             <button class="btn btn-danger" style="width: 100%; justify-content: center; margin-bottom: 12px;" onclick="fazerLogout()"><i class="fas fa-power-off"></i> Sair</button>
             <div style="font-size: 11px; color: #777;">
-                Powered by <strong style="color: var(--accent-color);">CS Code Solutions</strong>
+                <p style="font-size: 0.72rem; color: #aaa; text-align: center; margin-top: 6px; letter-spacing: 0.5px;">
+                Powered by <a href="https://www.instagram.com/cscode.solutions" target="_blank" style="color: #f28c28; text-decoration: none; font-weight: bold;">CS Code Solutions</a>
+            </p>
             </div>
         </div>
     </div>
