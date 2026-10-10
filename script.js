@@ -1289,8 +1289,8 @@ function editarReceber(id) {
     document.getElementById('modalReceberTitle').innerText = 'Editar Conta a Receber';
     abrirModal('modalReceber');
 }
-// --- LOGIN COM CONTA GOOGLE ---
-function realizarLoginGoogle() {
+// --- LOGIN COM CONTA GOOGLE (APENAS USUÁRIOS AUTORIZADOS) ---
+async function realizarLoginGoogle() {
     if (!isFirebaseConnected || !auth) {
         alert("Serviço de autenticação indisponível. Verifique sua conexão com o Firebase.");
         return;
@@ -1303,21 +1303,31 @@ function realizarLoginGoogle() {
     if (alertBox) alertBox.style.display = 'none';
     if (btnGoogle) {
         btnGoogle.disabled = true;
-        btnGoogle.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Conectando...';
+        btnGoogle.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verificando permissão...';
     }
 
-    auth.signInWithPopup(provider)
-        .then((result) => {
-            localStorage.setItem('ric_logged', 'true');
-            document.getElementById('login-screen').style.display = 'none';
-            if (btnGoogle) {
-                btnGoogle.disabled = false;
-                btnGoogle.innerHTML = '<i class="fab fa-google"></i> Entrar com o Google';
+    try {
+        const result = await auth.signInWithPopup(provider);
+        const user = result.user;
+        const userEmail = user.email ? user.email.toLowerCase() : '';
+
+        // Opcional: Se você mantiver uma coleção 'usuarios' ou 'autorizados' no Firestore,
+        // pode consultar aqui se o e-mail tem permissão de acesso.
+        let eAutorizado = true;
+
+        if (db) {
+            const userDoc = await db.collection("usuarios_autorizados").doc(userEmail).get();
+            // Se a coleção existir, valida se o documento existe
+            if (userDoc.exists && userDoc.data().ativo === false) {
+                eAutorizado = false;
             }
-            trocarAba('dashboard');
-        })
-        .catch((error) => {
-            console.error("Erro no login com Google:", error);
+        }
+
+        if (!eAutorizado) {
+            // Se a conta não for autorizada, desloga na hora
+            await auth.signOut();
+            localStorage.removeItem('ric_logged');
+
             if (btnGoogle) {
                 btnGoogle.disabled = false;
                 btnGoogle.innerHTML = '<i class="fab fa-google"></i> Entrar com o Google';
@@ -1326,7 +1336,33 @@ function realizarLoginGoogle() {
                 alertBox.style.display = 'block';
                 alertBox.style.background = '#f8d7da';
                 alertBox.style.color = '#721c24';
-                alertBox.innerText = 'Falha ao autenticar com a conta Google.';
+                alertBox.innerText = 'Acesso negado: Esta conta Google não possui permissão no sistema.';
             }
-        });
+            return;
+        }
+
+        // Login autorizado com sucesso
+        localStorage.setItem('ric_logged', 'true');
+        document.getElementById('login-screen').style.display = 'none';
+        if (btnGoogle) {
+            btnGoogle.disabled = false;
+            btnGoogle.innerHTML = '<i class="fab fa-google"></i> Entrar com o Google';
+        }
+        trocarAba('dashboard');
+
+    } catch (error) {
+        console.error("Erro no login com Google:", error);
+        if (btnGoogle) {
+            btnGoogle.disabled = false;
+            btnGoogle.innerHTML = '<i class="fab fa-google"></i> Entrar com o Google';
+        }
+        if (alertBox) {
+            alertBox.style.display = 'block';
+            alertBox.style.background = '#f8d7da';
+            alertBox.style.color = '#721c24';
+            alertBox.innerText = error.code === 'auth/popup-closed-by-user' 
+                ? 'Login cancelado.' 
+                : 'Falha ao autenticar com a conta Google.';
+        }
+    }
 }
