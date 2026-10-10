@@ -164,7 +164,58 @@ body {
 .login-footer strong {
     color: #FFD500;
 }
+/* DIVISOR DE LOGIN */
+.login-divider {
+    display: flex;
+    align-items: center;
+    text-align: center;
+    margin: 18px 0;
+    color: #888888;
+    font-size: 12px;
+    text-transform: uppercase;
+}
 
+.login-divider::before,
+.login-divider::after {
+    content: '';
+    flex: 1;
+    border-bottom: 1px solid #444444;
+}
+
+.login-divider span {
+    padding: 0 10px;
+}
+
+/* BOTÃO LOGIN GOOGLE */
+.btn-google-login {
+    width: 100%;
+    height: 44px;
+    background-color: #ffffff;
+    color: #333333;
+    border: none;
+    border-radius: 6px;
+    font-size: 14px;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    cursor: pointer;
+    transition: background-color 0.2s ease, transform 0.1s ease;
+}
+
+.btn-google-login i {
+    color: #4285F4;
+    font-size: 16px;
+}
+
+.btn-google-login:hover {
+    background-color: #f1f1f1;
+}
+
+.btn-google-login:active {
+    transform: scale(0.99);
+}
 /* 2. SIDEBAR FIXA DARK & GOLD (ISOLADA DO MODO CLARO) */
 .sidebar { 
     width: 260px; 
