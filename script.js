@@ -43,13 +43,14 @@ try {
 
 // --- INICIALIZAÇÃO E SESSÃO EXCLUSIVA GOOGLE ---
 document.addEventListener('DOMContentLoaded', () => {
-    // Carrega o tema salvo do usuário (Padrão: escuro)
     const temaSalvo = localStorage.getItem('ric_theme') || 'dark';
     aplicarTema(temaSalvo);
 
     carregarDadosLocal(false);
 
     const loginScreen = document.getElementById('login-screen');
+    const mainContent = document.querySelector('.main-content');
+    const sidebar = document.getElementById('sidebar');
 
     if (auth) {
         auth.onAuthStateChanged(async (user) => {
@@ -59,21 +60,35 @@ document.addEventListener('DOMContentLoaded', () => {
                     const autorizado = await verificarEmailAutorizado(userEmail);
 
                     if (autorizado) {
+                        // Oculta login e exibe a interface do sistema
                         if (loginScreen) loginScreen.style.display = 'none';
+                        if (mainContent) mainContent.style.display = 'block';
+                        if (sidebar) sidebar.style.display = 'flex';
+                        
                         trocarAba('dashboard');
                         iniciarEscutaFirebase();
                     } else {
                         await auth.signOut();
                         localStorage.removeItem('ric_logged');
+                        
+                        // Garante que o painel fica oculto e exibe o login
+                        if (mainContent) mainContent.style.display = 'none';
+                        if (sidebar) sidebar.style.display = 'none';
                         if (loginScreen) loginScreen.style.display = 'flex';
+                        
                         exibirErroLogin(`Acesso negado: O e-mail (${userEmail}) não possui permissão no sistema.`);
                     }
                 } catch (err) {
                     console.error("Erro durante verificação de autorização:", err);
+                    if (mainContent) mainContent.style.display = 'none';
+                    if (sidebar) sidebar.style.display = 'none';
                     if (loginScreen) loginScreen.style.display = 'flex';
                 }
             } else {
+                // Usuário deslogado: oculta painel e exibe login
                 localStorage.removeItem('ric_logged');
+                if (mainContent) mainContent.style.display = 'none';
+                if (sidebar) sidebar.style.display = 'none';
                 if (loginScreen) loginScreen.style.display = 'flex';
             }
         });
@@ -81,7 +96,6 @@ document.addEventListener('DOMContentLoaded', () => {
         if (loginScreen) loginScreen.style.display = 'flex';
     }
 });
-
 // CONSULTA WHITELIST NO FIRESTORE (laser_expert_data -> rg_allowed_emails)
 async function verificarEmailAutorizado(email) {
     if (!db || !email) return false;
