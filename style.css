@@ -164,49 +164,39 @@ body {
 .login-footer strong {
     color: #FFD500;
 }
-/* DIVISOR DE LOGIN */
-.login-divider {
-    display: flex;
-    align-items: center;
+/* CARD DE LOGIN SLIM (APENAS GOOGLE) */
+.login-card {
+    background-color: #1e1e1e; 
+    width: 100%; 
+    max-width: 380px;
+    padding: 40px 30px; 
+    border-radius: 12px; 
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    border-top: 5px solid #FFD500; 
+    color: white; 
     text-align: center;
-    margin: 18px 0;
-    color: #888888;
-    font-size: 12px;
-    text-transform: uppercase;
 }
 
-.login-divider::before,
-.login-divider::after {
-    content: '';
-    flex: 1;
-    border-bottom: 1px solid #444444;
-}
-
-.login-divider span {
-    padding: 0 10px;
-}
-
-/* BOTÃO LOGIN GOOGLE */
 .btn-google-login {
     width: 100%;
-    height: 44px;
+    height: 46px;
     background-color: #ffffff;
-    color: #333333;
+    color: #222222;
     border: none;
-    border-radius: 6px;
-    font-size: 14px;
+    border-radius: 8px;
+    font-size: 15px;
     font-weight: 600;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: 10px;
+    gap: 12px;
     cursor: pointer;
     transition: background-color 0.2s ease, transform 0.1s ease;
 }
 
 .btn-google-login i {
     color: #4285F4;
-    font-size: 16px;
+    font-size: 18px;
 }
 
 .btn-google-login:hover {
@@ -214,7 +204,7 @@ body {
 }
 
 .btn-google-login:active {
-    transform: scale(0.99);
+    transform: scale(0.98);
 }
 /* 2. SIDEBAR FIXA DARK & GOLD (ISOLADA DO MODO CLARO) */
 .sidebar { 
