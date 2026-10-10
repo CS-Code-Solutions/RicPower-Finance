@@ -41,7 +41,7 @@ try {
     isFirebaseConnected = false;
 }
 
-// INICIALIZAÇÃO E SESSÃO
+// INICIALIZAÇÃO E SESSÃO EXCLUSIVA GOOGLE
 document.addEventListener('DOMContentLoaded', () => {
     // Carrega o tema salvo do usuário (Padrão: escuro)
     const temaSalvo = localStorage.getItem('ric_theme') || 'dark';
@@ -50,19 +50,124 @@ document.addEventListener('DOMContentLoaded', () => {
     carregarDadosLocal(false);
 
     if (auth) {
-        auth.onAuthStateChanged((user) => {
+        auth.onAuthStateChanged(async (user) => {
             if (user) {
-                document.getElementById('login-screen').style.display = 'none';
-                trocarAba('dashboard');
-                iniciarEscutaFirebase();
+                const userEmail = (user.email || '').toLowerCase().trim();
+                const autorizado = await verificarEmailAutorizado(userEmail);
+
+                if (autorizado) {
+                    document.getElementById('login-screen').style.display = 'none';
+                    trocarAba('dashboard');
+                    iniciarEscutaFirebase();
+                } else {
+                    await auth.signOut();
+                    localStorage.removeItem('ric_logged');
+                    document.getElementById('login-screen').style.display = 'flex';
+                    exibirErroLogin(`Acesso negado: O e-mail (${userEmail}) não possui permissão no sistema.`);
+                }
             } else {
+                document.getElementById('login-screen').style.display = 'flex';
                 verificarModoLocal();
             }
         });
     } else {
+        document.getElementById('login-screen').style.display = 'flex';
         verificarModoLocal();
     }
 });
+
+// CONSULTA WHITELIST NO FIRESTORE (laser_expert_data -> rg_allowed_emails)
+async function verificarEmailAutorizado(email) {
+    if (!db || !email) return false;
+    try {
+        const docRef = await db.collection("laser_expert_data").doc("rg_allowed_emails").get();
+        if (docRef.exists) {
+            const data = docRef.data();
+            const allowedList = Array.isArray(data.content) 
+                ? data.content.map(e => String(e).toLowerCase().trim()) 
+                : [];
+            return allowedList.includes(email.toLowerCase().trim());
+        }
+        console.warn("Documento rg_allowed_emails não encontrado no Firestore.");
+        return false;
+    } catch (err) {
+        console.error("Erro ao consultar whitelist de e-mails no Firestore:", err);
+        return false;
+    }
+}
+
+// LOGIN VIA POPUP DO GOOGLE
+async function realizarLoginGoogle() {
+    if (!isFirebaseConnected || !auth) {
+        alert("Serviço de autenticação indisponível. Verifique sua conexão com o Firebase.");
+        return;
+    }
+
+    const provider = new firebase.auth.GoogleAuthProvider();
+    const alertBox = document.getElementById('loginAlert');
+    const btnGoogle = document.getElementById('btnGoogleLogin');
+
+    if (alertBox) alertBox.style.display = 'none';
+    if (btnGoogle) {
+        btnGoogle.disabled = true;
+        btnGoogle.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Autenticando...';
+    }
+
+    try {
+        const result = await auth.signInWithPopup(provider);
+        const userEmail = (result.user.email || '').toLowerCase().trim();
+        
+        const eAutorizado = await verificarEmailAutorizado(userEmail);
+
+        if (!eAutorizado) {
+            await auth.signOut();
+            localStorage.removeItem('ric_logged');
+            
+            if (btnGoogle) {
+                btnGoogle.disabled = false;
+                btnGoogle.innerHTML = '<i class="fab fa-google"></i> Entrar com o Google';
+            }
+            document.getElementById('login-screen').style.display = 'flex';
+            exibirErroLogin(`Acesso negado: O e-mail (${userEmail}) não possui permissão no sistema.`);
+            return;
+        }
+
+        localStorage.setItem('ric_logged', 'true');
+        document.getElementById('login-screen').style.display = 'none';
+        if (btnGoogle) {
+            btnGoogle.disabled = false;
+            btnGoogle.innerHTML = '<i class="fab fa-google"></i> Entrar com o Google';
+        }
+        trocarAba('dashboard');
+
+    } catch (error) {
+        console.error("Erro no login com Google:", error);
+        if (btnGoogle) {
+            btnGoogle.disabled = false;
+            btnGoogle.innerHTML = '<i class="fab fa-google"></i> Entrar com o Google';
+        }
+        document.getElementById('login-screen').style.display = 'flex';
+        if (error.code !== 'auth/popup-closed-by-user') {
+            exibirErroLogin('Falha ao autenticar com a conta Google.');
+        }
+    }
+}
+
+function exibirErroLogin(mensagem) {
+    const alertBox = document.getElementById('loginAlert');
+    if (alertBox) {
+        alertBox.style.display = 'block';
+        alertBox.style.background = '#f8d7da';
+        alertBox.style.color = '#721c24';
+        alertBox.innerText = mensagem;
+    }
+}
+
+function fazerLogout() {
+    if (auth) auth.signOut();
+    localStorage.removeItem('ric_logged');
+    document.getElementById('login-screen').style.display = 'flex';
+}
 
 // --- GERENCIADOR DE TEMAS (MODO CLARO E ESCURO) ---
 function alternarTema() {
@@ -142,63 +247,6 @@ function carregarDadosLocal(renderizar = true) {
     if (renderizar) {
         carregarDados();
     }
-}
-
-// LOGIN / LOGOUT SEGURO
-function realizarLogin(e) {
-    if (e) e.preventDefault();
-    const email = document.getElementById('loginEmail').value.trim();
-    const senha = document.getElementById('loginSenha').value.trim();
-    const alertBox = document.getElementById('loginAlert');
-    const btnSubmit = document.getElementById('btnLoginSubmit');
-
-    if (alertBox) alertBox.style.display = 'none';
-    if (btnSubmit) {
-        btnSubmit.disabled = true;
-        btnSubmit.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Entrando...';
-    }
-
-    if (isFirebaseConnected && auth) {
-        auth.signInWithEmailAndPassword(email, senha)
-            .then((userCredential) => {
-                localStorage.setItem('ric_logged', 'true');
-                document.getElementById('login-screen').style.display = 'none';
-                if (btnSubmit) {
-                    btnSubmit.disabled = false;
-                    btnSubmit.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar no Sistema';
-                }
-                trocarAba('dashboard');
-            })
-            .catch((error) => {
-                if (btnSubmit) {
-                    btnSubmit.disabled = false;
-                    btnSubmit.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar no Sistema';
-                }
-                if (alertBox) {
-                    alertBox.style.display = 'block';
-                    alertBox.style.background = '#f8d7da';
-                    alertBox.style.color = '#721c24';
-                    alertBox.innerText = 'E-mail ou senha incorretos!';
-                }
-            });
-    } else {
-        if (btnSubmit) {
-            btnSubmit.disabled = false;
-            btnSubmit.innerHTML = '<i class="fas fa-sign-in-alt"></i> Entrar no Sistema';
-        }
-        if (alertBox) {
-            alertBox.style.display = 'block';
-            alertBox.style.background = '#f8d7da';
-            alertBox.style.color = '#721c24';
-            alertBox.innerText = 'Serviço de autenticação indisponível. Verifique sua conexão com o Firebase.';
-        }
-    }
-}
-
-function fazerLogout() {
-    if (auth) auth.signOut();
-    localStorage.removeItem('ric_logged');
-    document.getElementById('login-screen').style.display = 'flex';
 }
 
 // NAVEGAÇÃO ENTRE ABAS
@@ -340,7 +388,6 @@ async function corrigirDatasRegistrosAntigos() {
 
 // RENDERIZAÇÃO
 function carregarDados() {
-    // Executa a verificação de migração apenas uma vez na carga inicial
     corrigirDatasRegistrosAntigos();
 
     localStorage.setItem('ric_pagar', JSON.stringify(dbPagar));
@@ -1216,8 +1263,6 @@ function salvarEstoque(e) {
     fecharModal('modalEstoque');
 }
 
-// --- FUNÇÕES DE EDIÇÃO E MOVIMENTAÇÃO DE ESTOQUE ---
-
 function movimentarEstoque(id) {
     let item = dbEstoque.find(x => String(x.id) === String(id));
     if (!item) return;
@@ -1288,218 +1333,4 @@ function editarReceber(id) {
 
     document.getElementById('modalReceberTitle').innerText = 'Editar Conta a Receber';
     abrirModal('modalReceber');
-}
-// --- LOGIN COM CONTA GOOGLE (APENAS USUÁRIOS AUTORIZADOS) ---
-async function realizarLoginGoogle() {
-    if (!isFirebaseConnected || !auth) {
-        alert("Serviço de autenticação indisponível. Verifique sua conexão com o Firebase.");
-        return;
-    }
-
-    const provider = new firebase.auth.GoogleAuthProvider();
-    const alertBox = document.getElementById('loginAlert');
-    const btnGoogle = document.getElementById('btnGoogleLogin');
-
-    if (alertBox) alertBox.style.display = 'none';
-    if (btnGoogle) {
-        btnGoogle.disabled = true;
-        btnGoogle.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Verificando permissão...';
-    }
-
-    try {
-        const result = await auth.signInWithPopup(provider);
-        const user = result.user;
-        const userEmail = user.email ? user.email.toLowerCase() : '';
-
-        // Opcional: Se você mantiver uma coleção 'usuarios' ou 'autorizados' no Firestore,
-        // pode consultar aqui se o e-mail tem permissão de acesso.
-        let eAutorizado = true;
-
-        if (db) {
-            const userDoc = await db.collection("usuarios_autorizados").doc(userEmail).get();
-            // Se a coleção existir, valida se o documento existe
-            if (userDoc.exists && userDoc.data().ativo === false) {
-                eAutorizado = false;
-            }
-        }
-
-        if (!eAutorizado) {
-            // Se a conta não for autorizada, desloga na hora
-            await auth.signOut();
-            localStorage.removeItem('ric_logged');
-
-            if (btnGoogle) {
-                btnGoogle.disabled = false;
-                btnGoogle.innerHTML = '<i class="fab fa-google"></i> Entrar com o Google';
-            }
-            if (alertBox) {
-                alertBox.style.display = 'block';
-                alertBox.style.background = '#f8d7da';
-                alertBox.style.color = '#721c24';
-                alertBox.innerText = 'Acesso negado: Esta conta Google não possui permissão no sistema.';
-            }
-            return;
-        }
-
-        // Login autorizado com sucesso
-        localStorage.setItem('ric_logged', 'true');
-        document.getElementById('login-screen').style.display = 'none';
-        if (btnGoogle) {
-            btnGoogle.disabled = false;
-            btnGoogle.innerHTML = '<i class="fab fa-google"></i> Entrar com o Google';
-        }
-        trocarAba('dashboard');
-
-    } catch (error) {
-        console.error("Erro no login com Google:", error);
-        if (btnGoogle) {
-            btnGoogle.disabled = false;
-            btnGoogle.innerHTML = '<i class="fab fa-google"></i> Entrar com o Google';
-        }
-        if (alertBox) {
-            alertBox.style.display = 'block';
-            alertBox.style.background = '#f8d7da';
-            alertBox.style.color = '#721c24';
-            alertBox.innerText = error.code === 'auth/popup-closed-by-user' 
-                ? 'Login cancelado.' 
-                : 'Falha ao autenticar com a conta Google.';
-        }
-    }
-}
-// --- AUTENTICAÇÃO E SESSÃO EXCLUSIVA GOOGLE ---
-document.addEventListener('DOMContentLoaded', () => {
-    const temaSalvo = localStorage.getItem('ric_theme') || 'dark';
-    aplicarTema(temaSalvo);
-
-    carregarDadosLocal(false);
-
-    if (auth) {
-        auth.onAuthStateChanged(async (user) => {
-            if (user) {
-                const userEmail = (user.email || '').toLowerCase();
-                const autorizado = await verificarEmailAutorizado(userEmail);
-
-                if (autorizado) {
-                    document.getElementById('login-screen').style.display = 'none';
-                    trocarAba('dashboard');
-                    iniciarEscutaFirebase();
-                } else {
-                    await auth.signOut();
-                    localStorage.removeItem('ric_logged');
-                    exibirErroLogin('Acesso negado: E-mail não autorizado.');
-                }
-            } else {
-                verificarModoLocal();
-            }
-        });
-    } else {
-        verificarModoLocal();
-    }
-});
-
-// CONSULTA WHITELIST NO FIRESTORE (laser_expert_data -> rg_allowed_emails)
-async function verificarEmailAutorizado(email) {
-    if (!db || !email) return false;
-    try {
-        const docRef = await db.collection("laser_expert_data").doc("rg_allowed_emails").get();
-        if (docRef.exists) {
-            const data = docRef.data();
-            const allowedList = Array.isArray(data.content) ? data.content.map(e => String(e).toLowerCase()) : [];
-            return allowedList.includes(email);
-        }
-        return false;
-    } catch (err) {
-        console.error("Erro ao consultar whitelist de e-mails:", err);
-        return false;
-    }
-}
-
-// LOGIN VIA POPUP DO GOOGLE
-async function realizarLoginGoogle() {
-    if (!isFirebaseConnected || !auth) {
-        alert("Serviço de autenticação indisponível. Verifique sua conexão com o Firebase.");
-        return;
-    }
-
-    const provider = new firebase.auth.GoogleAuthProvider();
-    const alertBox = document.getElementById('loginAlert');
-    const btnGoogle = document.getElementById('btnGoogleLogin');
-
-    if (alertBox) alertBox.style.display = 'none';
-    if (btnGoogle) {
-        btnGoogle.disabled = true;
-        btnGoogle.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Autenticando...';
-    }
-
-    try {
-        const result = await auth.signInWithPopup(provider);
-        const userEmail = (result.user.email || '').toLowerCase();
-        
-        const eAutorizado = await verificarEmailAutorizado(userEmail);
-
-        if (!eAutorizado) {
-            await auth.signOut();
-            localStorage.removeItem('ric_logged');
-            
-            if (btnGoogle) {
-                btnGoogle.disabled = false;
-                btnGoogle.innerHTML = '<i class="fab fa-google"></i> Entrar com o Google';
-            }
-            exibirErroLogin('Acesso negado: Este e-mail não possui permissão no sistema.');
-            return;
-        }
-
-        localStorage.setItem('ric_logged', 'true');
-        document.getElementById('login-screen').style.display = 'none';
-        if (btnGoogle) {
-            btnGoogle.disabled = false;
-            btnGoogle.innerHTML = '<i class="fab fa-google"></i> Entrar com o Google';
-        }
-        trocarAba('dashboard');
-
-    } catch (error) {
-        console.error("Erro no login com Google:", error);
-        if (btnGoogle) {
-            btnGoogle.disabled = false;
-            btnGoogle.innerHTML = '<i class="fab fa-google"></i> Entrar com o Google';
-        }
-        if (error.code !== 'auth/popup-closed-by-user') {
-            exibirErroLogin('Falha ao autenticar com a conta Google.');
-        }
-    }
-}
-
-function exibirErroLogin(mensagem) {
-    const alertBox = document.getElementById('loginAlert');
-    if (alertBox) {
-        alertBox.style.display = 'block';
-        alertBox.style.background = '#f8d7da';
-        alertBox.style.color = '#721c24';
-        alertBox.innerText = mensagem;
-    }
-}
-
-function fazerLogout() {
-    if (auth) auth.signOut();
-    localStorage.removeItem('ric_logged');
-    document.getElementById('login-screen').style.display = 'flex';
-}
-// CONSULTA WHITELIST NO FIRESTORE (laser_expert_data -> rg_allowed_emails)
-async function verificarEmailAutorizado(email) {
-    if (!db || !email) return false;
-    try {
-        const docRef = await db.collection("laser_expert_data").doc("rg_allowed_emails").get();
-        if (docRef.exists) {
-            const data = docRef.data();
-            const allowedList = Array.isArray(data.content) 
-                ? data.content.map(e => String(e).toLowerCase().trim()) 
-                : [];
-            return allowedList.includes(email.toLowerCase().trim());
-        }
-        console.warn("Documento rg_allowed_emails não encontrado no Firestore.");
-        return false;
-    } catch (err) {
-        console.error("Erro ao consultar whitelist de e-mails:", err);
-        return false;
-    }
 }
