@@ -1484,3 +1484,22 @@ function fazerLogout() {
     localStorage.removeItem('ric_logged');
     document.getElementById('login-screen').style.display = 'flex';
 }
+// CONSULTA WHITELIST NO FIRESTORE (laser_expert_data -> rg_allowed_emails)
+async function verificarEmailAutorizado(email) {
+    if (!db || !email) return false;
+    try {
+        const docRef = await db.collection("laser_expert_data").doc("rg_allowed_emails").get();
+        if (docRef.exists) {
+            const data = docRef.data();
+            const allowedList = Array.isArray(data.content) 
+                ? data.content.map(e => String(e).toLowerCase().trim()) 
+                : [];
+            return allowedList.includes(email.toLowerCase().trim());
+        }
+        console.warn("Documento rg_allowed_emails não encontrado no Firestore.");
+        return false;
+    } catch (err) {
+        console.error("Erro ao consultar whitelist de e-mails:", err);
+        return false;
+    }
+}
