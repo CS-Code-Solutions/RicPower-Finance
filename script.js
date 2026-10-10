@@ -1289,3 +1289,44 @@ function editarReceber(id) {
     document.getElementById('modalReceberTitle').innerText = 'Editar Conta a Receber';
     abrirModal('modalReceber');
 }
+// --- LOGIN COM CONTA GOOGLE ---
+function realizarLoginGoogle() {
+    if (!isFirebaseConnected || !auth) {
+        alert("Serviço de autenticação indisponível. Verifique sua conexão com o Firebase.");
+        return;
+    }
+
+    const provider = new firebase.auth.GoogleAuthProvider();
+    const alertBox = document.getElementById('loginAlert');
+    const btnGoogle = document.getElementById('btnGoogleLogin');
+
+    if (alertBox) alertBox.style.display = 'none';
+    if (btnGoogle) {
+        btnGoogle.disabled = true;
+        btnGoogle.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Conectando...';
+    }
+
+    auth.signInWithPopup(provider)
+        .then((result) => {
+            localStorage.setItem('ric_logged', 'true');
+            document.getElementById('login-screen').style.display = 'none';
+            if (btnGoogle) {
+                btnGoogle.disabled = false;
+                btnGoogle.innerHTML = '<i class="fab fa-google"></i> Entrar com o Google';
+            }
+            trocarAba('dashboard');
+        })
+        .catch((error) => {
+            console.error("Erro no login com Google:", error);
+            if (btnGoogle) {
+                btnGoogle.disabled = false;
+                btnGoogle.innerHTML = '<i class="fab fa-google"></i> Entrar com o Google';
+            }
+            if (alertBox) {
+                alertBox.style.display = 'block';
+                alertBox.style.background = '#f8d7da';
+                alertBox.style.color = '#721c24';
+                alertBox.innerText = 'Falha ao autenticar com a conta Google.';
+            }
+        });
+}
