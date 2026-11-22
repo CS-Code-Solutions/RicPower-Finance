@@ -60,7 +60,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     const autorizado = await verificarEmailAutorizado(userEmail);
 
                     if (autorizado) {
-                        // Oculta login e exibe a interface do sistema
                         if (loginScreen) loginScreen.style.display = 'none';
                         if (mainContent) mainContent.style.display = 'block';
                         if (sidebar) sidebar.style.display = 'flex';
@@ -71,7 +70,6 @@ document.addEventListener('DOMContentLoaded', () => {
                         await auth.signOut();
                         localStorage.removeItem('ric_logged');
                         
-                        // Garante que o painel fica oculto e exibe o login
                         if (mainContent) mainContent.style.display = 'none';
                         if (sidebar) sidebar.style.display = 'none';
                         if (loginScreen) loginScreen.style.display = 'flex';
@@ -85,7 +83,6 @@ document.addEventListener('DOMContentLoaded', () => {
                     if (loginScreen) loginScreen.style.display = 'flex';
                 }
             } else {
-                // Usuário deslogado: oculta painel e exibe login
                 localStorage.removeItem('ric_logged');
                 if (mainContent) mainContent.style.display = 'none';
                 if (sidebar) sidebar.style.display = 'none';
@@ -369,7 +366,6 @@ async function corrigirDatasRegistrosAntigos() {
     const batch = (isFirebaseConnected && db) ? db.batch() : null;
     let operacoesBatch = 0;
 
-    // 1. Corrigir Contas a Pagar
     dbPagar.forEach(item => {
         const rawVenc = item.venc || item.vencimento;
         if (rawVenc && (!isNaN(rawVenc) && Number(rawVenc) > 30000)) {
@@ -386,7 +382,6 @@ async function corrigirDatasRegistrosAntigos() {
         }
     });
 
-    // 2. Corrigir Contas a Receber
     dbReceber.forEach(item => {
         const rawVenc = item.venc || item.vencimento;
         if (rawVenc && (!isNaN(rawVenc) && Number(rawVenc) > 30000)) {
@@ -645,11 +640,11 @@ function renderGraficos(pagarList = [], receberList = [], catPessoal = 0, catAdm
     if (typeof Chart === 'undefined') return;
 
     const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-    const textColor = isLight ? '#475569' : '#9ca3af';
-    const gridColor = isLight ? 'rgba(0, 0, 0, 0.06)' : 'rgba(255, 255, 255, 0.06)';
-    const highlightBandColor = isLight ? 'rgba(0, 0, 0, 0.04)' : 'rgba(255, 255, 255, 0.045)';
+    const textColor = isLight ? '#64748b' : '#8e9299';
+    const gridColor = isLight ? 'rgba(0, 0, 0, 0.06)' : 'rgba(255, 255, 255, 0.05)';
+    const highlightBandColor = isLight ? 'rgba(0, 0, 0, 0.045)' : 'rgba(255, 255, 255, 0.04)';
 
-    // 1. Gráfico Principal: Linha Verde (A Receber) x Linha Vermelha (A Pagar) por Mês
+    // 1. Gráfico Principal: Linha Verde (Entradas/A Receber) x Linha Vermelha (Saídas/A Pagar) por Mês
     const elFluxo = document.getElementById('chartFluxoCaixa');
     if (elFluxo) {
         const ctxFluxo = elFluxo.getContext('2d');
@@ -661,7 +656,7 @@ function renderGraficos(pagarList = [], receberList = [], catPessoal = 0, catAdm
         const extrairChaveMes = (dataStr) => {
             if (!dataStr) return null;
             const clean = String(dataStr).trim();
-            if (/^\d{4}-\d{2}/.test(clean)) return clean.slice(0, 7); // YYYY-MM
+            if (/^\d{4}-\d{2}/.test(clean)) return clean.slice(0, 7);
             if (/^\d{2}\/\d{2}\/\d{4}/.test(clean)) {
                 const p = clean.split('/');
                 return `${p[2]}-${p[1]}`;
@@ -669,7 +664,6 @@ function renderGraficos(pagarList = [], receberList = [], catPessoal = 0, catAdm
             return null;
         };
 
-        // Agrupa Contas a Receber por mês
         receberList.forEach(item => {
             const chave = extrairChaveMes(item.venc || item.vencimento);
             if (!chave) return;
@@ -677,7 +671,6 @@ function renderGraficos(pagarList = [], receberList = [], catPessoal = 0, catAdm
             mapaMensal[chave].receber += Number(item.valor || 0);
         });
 
-        // Agrupa Contas a Pagar por mês
         pagarList.forEach(item => {
             const chave = extrairChaveMes(item.venc || item.vencimento);
             if (!chave) return;
@@ -687,21 +680,29 @@ function renderGraficos(pagarList = [], receberList = [], catPessoal = 0, catAdm
 
         let chavesOrdenadas = Object.keys(mapaMensal).sort();
 
-        // Garante ao menos uma janela de 6 meses no eixo X para a curva ficar visualmente fluida
+        // Preenche janela mínima de 7 meses contínuos para curva suave estilo segunda imagem
         if (chavesOrdenadas.length === 0) {
             const hoje = new Date();
-            for (let i = 5; i >= 0; i--) {
+            for (let i = 6; i >= 0; i--) {
                 const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
                 const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
                 mapaMensal[k] = { receber: 0, pagar: 0 };
             }
             chavesOrdenadas = Object.keys(mapaMensal).sort();
-        } else if (chavesOrdenadas.length < 6) {
+        } else {
+            const [primAno, primMes] = chavesOrdenadas[0].split('-').map(Number);
             const [ultAno, ultMes] = chavesOrdenadas[chavesOrdenadas.length - 1].split('-').map(Number);
-            for (let i = 5; i >= 0; i--) {
-                const d = new Date(ultAno, (ultMes - 1) - i, 1);
-                const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+            const inicioDate = new Date(primAno, primMes - 1, 1);
+            const fimDate = new Date(ultAno, ultMes - 1, 1);
+
+            // Garante no mínimo 7 meses até o último mês registrado
+            const minInicio = new Date(fimDate.getFullYear(), fimDate.getMonth() - 6, 1);
+            const cursor = inicioDate < minInicio ? new Date(inicioDate) : new Date(minInicio);
+
+            while (cursor <= fimDate) {
+                const k = `${cursor.getFullYear()}-${String(cursor.getMonth() + 1).padStart(2, '0')}`;
                 if (!mapaMensal[k]) mapaMensal[k] = { receber: 0, pagar: 0 };
+                cursor.setMonth(cursor.getMonth() + 1);
             }
             chavesOrdenadas = Object.keys(mapaMensal).sort();
         }
@@ -716,22 +717,22 @@ function renderGraficos(pagarList = [], receberList = [], catPessoal = 0, catAdm
         const dadosReceber = chavesOrdenadas.map(k => mapaMensal[k].receber);
         const dadosPagar = chavesOrdenadas.map(k => mapaMensal[k].pagar);
 
-        // Identifica o índice do mês atual (ou o último mês exibido) para a faixa vertical de destaque
+        // Índice do mês atual ou último mês exibido para faixa vertical de destaque
         const hoje = new Date();
         const chaveAtual = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
         let indexDestaque = chavesOrdenadas.indexOf(chaveAtual);
         if (indexDestaque === -1) indexDestaque = chavesOrdenadas.length - 1;
 
-        // Degradês suaves abaixo das linhas
-        const gradVerde = ctxFluxo.createLinearGradient(0, 0, 0, 310);
-        gradVerde.addColorStop(0, 'rgba(34, 197, 94, 0.28)');
+        // Gradientes verticais suaves abaixo das linhas
+        const gradVerde = ctxFluxo.createLinearGradient(0, 20, 0, 290);
+        gradVerde.addColorStop(0, 'rgba(34, 197, 94, 0.25)');
         gradVerde.addColorStop(1, 'rgba(34, 197, 94, 0.0)');
 
-        const gradVermelho = ctxFluxo.createLinearGradient(0, 0, 0, 310);
-        gradVermelho.addColorStop(0, 'rgba(239, 68, 68, 0.25)');
+        const gradVermelho = ctxFluxo.createLinearGradient(0, 20, 0, 290);
+        gradVermelho.addColorStop(0, 'rgba(239, 68, 68, 0.28)');
         gradVermelho.addColorStop(1, 'rgba(239, 68, 68, 0.0)');
 
-        // Plugin para faixa vertical discreta no mês em destaque
+        // Plugin para desenhar a faixa vertical no mês em destaque
         const pluginDestaqueMes = {
             id: 'destaqueMesAtual',
             beforeDatasetsDraw(chart) {
@@ -739,19 +740,31 @@ function renderGraficos(pagarList = [], receberList = [], catPessoal = 0, catAdm
                 if (!chartArea || !x || indexDestaque < 0) return;
 
                 const xPos = x.getPixelForValue(indexDestaque);
-                const step = x.ticks.length > 1 
-                    ? Math.abs(x.getPixelForValue(1) - x.getPixelForValue(0)) 
-                    : 60;
-                const larguraColuna = Math.min(step * 0.65, 58);
+                const step = x.ticks.length > 1
+                    ? Math.abs(x.getPixelForValue(1) - x.getPixelForValue(0))
+                    : 54;
+                const larguraColuna = Math.min(Math.max(step * 0.72, 34), 56);
 
                 ctx.save();
                 ctx.fillStyle = highlightBandColor;
-                ctx.fillRect(
-                    xPos - larguraColuna / 2,
-                    chartArea.top,
-                    larguraColuna,
-                    chartArea.bottom - chartArea.top
-                );
+                ctx.beginPath();
+                if (ctx.roundRect) {
+                    ctx.roundRect(
+                        xPos - larguraColuna / 2,
+                        chartArea.top,
+                        larguraColuna,
+                        chartArea.bottom - chartArea.top,
+                        6
+                    );
+                } else {
+                    ctx.rect(
+                        xPos - larguraColuna / 2,
+                        chartArea.top,
+                        larguraColuna,
+                        chartArea.bottom - chartArea.top
+                    );
+                }
+                ctx.fill();
                 ctx.restore();
             }
         };
@@ -769,20 +782,6 @@ function renderGraficos(pagarList = [], receberList = [], catPessoal = 0, catAdm
                 labels: labels,
                 datasets: [
                     {
-                        label: 'A Receber (Entradas)',
-                        data: dadosReceber,
-                        borderColor: '#22c55e',
-                        backgroundColor: gradVerde,
-                        borderWidth: 2.5,
-                        tension: 0.42,
-                        fill: true,
-                        pointRadius: (ctx) => ctx.dataIndex === indexDestaque ? 5 : 3,
-                        pointHoverRadius: 6,
-                        pointBackgroundColor: '#22c55e',
-                        pointBorderColor: isLight ? '#ffffff' : '#121212',
-                        pointBorderWidth: 1.5
-                    },
-                    {
                         label: 'A Pagar (Saídas)',
                         data: dadosPagar,
                         borderColor: '#ef4444',
@@ -793,7 +792,21 @@ function renderGraficos(pagarList = [], receberList = [], catPessoal = 0, catAdm
                         pointRadius: (ctx) => ctx.dataIndex === indexDestaque ? 5 : 3,
                         pointHoverRadius: 6,
                         pointBackgroundColor: '#ef4444',
-                        pointBorderColor: isLight ? '#ffffff' : '#121212',
+                        pointBorderColor: isLight ? '#ffffff' : '#181818',
+                        pointBorderWidth: 1.5
+                    },
+                    {
+                        label: 'A Receber (Entradas)',
+                        data: dadosReceber,
+                        borderColor: '#22c55e',
+                        backgroundColor: gradVerde,
+                        borderWidth: 2.5,
+                        tension: 0.42,
+                        fill: true,
+                        pointRadius: (ctx) => ctx.dataIndex === indexDestaque ? 5.5 : 3,
+                        pointHoverRadius: 6.5,
+                        pointBackgroundColor: '#22c55e',
+                        pointBorderColor: isLight ? '#ffffff' : '#181818',
                         pointBorderWidth: 1.5
                     }
                 ]
@@ -814,12 +827,12 @@ function renderGraficos(pagarList = [], receberList = [], catPessoal = 0, catAdm
                             pointStyle: 'circle',
                             boxWidth: 8,
                             boxHeight: 8,
-                            padding: 20,
-                            font: { size: 12, weight: '600' }
+                            padding: 18,
+                            font: { size: 12.5, weight: '500' }
                         }
                     },
                     tooltip: {
-                        backgroundColor: isLight ? '#1e293b' : '#18181b',
+                        backgroundColor: isLight ? '#1e293b' : '#141414',
                         titleColor: '#FFD500',
                         bodyColor: '#f8fafc',
                         borderColor: '#333333',
@@ -835,10 +848,12 @@ function renderGraficos(pagarList = [], receberList = [], catPessoal = 0, catAdm
                         grid: { display: false },
                         border: { display: false },
                         ticks: {
+                            autoSkip: true,
+                            maxRotation: 0,
                             color: (ctx) => ctx.index === indexDestaque ? (isLight ? '#111111' : '#ffffff') : textColor,
                             font: (ctx) => ({
                                 size: 12,
-                                weight: ctx.index === indexDestaque ? 'bold' : 'normal'
+                                weight: ctx.index === indexDestaque ? '700' : '500'
                             }),
                             padding: 8
                         }
@@ -852,7 +867,7 @@ function renderGraficos(pagarList = [], receberList = [], catPessoal = 0, catAdm
                         },
                         ticks: {
                             color: textColor,
-                            font: { size: 11 },
+                            font: { size: 11.5 },
                             padding: 10,
                             maxTicksLimit: 5,
                             callback: (val) => formatarEixoY(val)
@@ -877,7 +892,7 @@ function renderGraficos(pagarList = [], receberList = [], catPessoal = 0, catAdm
                     data: [catPessoal, catAdmin, catPecas], 
                     backgroundColor: ['#FFD500', '#3498db', '#e74c3c'],
                     borderWidth: 2,
-                    borderColor: isLight ? '#ffffff' : '#1e1e1e'
+                    borderColor: isLight ? '#ffffff' : '#181818'
                 }]
             },
             options: { 
