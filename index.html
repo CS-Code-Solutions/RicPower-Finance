@@ -149,22 +149,25 @@
                 </div>
             </div>
 
-            <!-- GRÁFICO PRINCIPAL EM DESTAQUE (LARGURA TOTAL) -->
+            <!-- GRÁFICO PRINCIPAL EM DESTAQUE (ESTILO EIXO X MENSAL / EIXO Y EM R$) -->
             <div class="panel chart-main-panel">
-                <div class="panel-header" style="border-bottom: none; margin-bottom: 6px; padding-bottom: 0;">
-                    <div>
-                        <div class="panel-title" style="font-size: 18px; letter-spacing: 0.3px;">
-                            <i class="fas fa-chart-line" style="color: var(--accent-color); margin-right: 6px;"></i>
-                            FLUXO MENSAL: A RECEBER X A PAGAR
-                        </div>
-                        <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
-                            Evolução comparativa mensal de receitas e despesas (eixo X: meses | eixo Y: valores em R$)
-                        </p>
-                    </div>
+                <div class="chart-main-header">
+                    <div class="chart-main-title">FLUXO DE CAIXA MENSAL</div>
+                    <div class="chart-main-subtitle">Evolução mensal de receitas e despesas (R$)</div>
                 </div>
+
                 <div class="chart-main-wrapper">
                     <canvas id="chartFluxoCaixa"></canvas>
                 </div>
+
+                <details class="chart-info-details">
+                    <summary>Como cada indicador é calculado</summary>
+                    <div class="chart-info-body">
+                        <p><strong>A Receber / Entradas (Linha Verde):</strong> Soma mensal de todos os lançamentos registrados em <em>Contas a Receber</em> (pagos e pendentes) agrupados pelo mês de vencimento.</p>
+                        <p><strong>A Pagar / Saídas (Linha Vermelha):</strong> Soma mensal de todos os lançamentos registrados em <em>Contas a Pagar</em> (pagos, pendentes e atrasados) agrupados pelo mês de vencimento.</p>
+                        <p><strong>Faixa Vertical Destacada:</strong> Indica o mês atual em andamento (ou o último mês com movimentação no filtro selecionado).</p>
+                    </div>
+                </details>
             </div>
 
             <!-- PAINÉIS SECUNDÁRIOS LADO A LADO -->
