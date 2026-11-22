@@ -96,6 +96,7 @@ document.addEventListener('DOMContentLoaded', () => {
         if (loginScreen) loginScreen.style.display = 'flex';
     }
 });
+
 // CONSULTA WHITELIST NO FIRESTORE (laser_expert_data -> rg_allowed_emails)
 async function verificarEmailAutorizado(email) {
     if (!db || !email) return false;
@@ -449,7 +450,7 @@ function carregarDados() {
 
     atualizarDREDual(pagarFiltrado, receberFiltrado);
     renderTabelas(pagarFiltrado, receberFiltrado);
-    renderGraficos(realIn, realOut, catPessoal, catAdmin, catPecas);
+    renderGraficos(pagarFiltrado, receberFiltrado, catPessoal, catAdmin, catPecas);
 }
 
 function atualizarDREDual(pagarList = dbPagar, receberList = dbReceber) {
@@ -639,40 +640,227 @@ function renderTabelas(pagarList = dbPagar, receberList = dbReceber) {
     }
 }
 
-// --- RENDERIZAÇÃO DE GRÁFICOS (CHART.JS) COM SUPORTE A TEMAS ---
-function renderGraficos(realIn, realOut, catPessoal = 0, catAdmin = 0, catPecas = 0) {
+// --- RENDERIZAÇÃO DE GRÁFICOS (CHART.JS) ESTILO EIXO X/Y MENSAL ---
+function renderGraficos(pagarList = [], receberList = [], catPessoal = 0, catAdmin = 0, catPecas = 0) {
     if (typeof Chart === 'undefined') return;
 
     const isLight = document.documentElement.getAttribute('data-theme') === 'light';
-    const textColor = isLight ? '#2c3e50' : '#e0e0e0';
-    const gridColor = isLight ? '#e2e8f0' : '#333333';
+    const textColor = isLight ? '#475569' : '#9ca3af';
+    const gridColor = isLight ? 'rgba(0, 0, 0, 0.06)' : 'rgba(255, 255, 255, 0.06)';
+    const highlightBandColor = isLight ? 'rgba(0, 0, 0, 0.04)' : 'rgba(255, 255, 255, 0.045)';
 
-    // 1. Gráfico de Barra: Fluxo de Caixa Realizado
+    // 1. Gráfico Principal: Linha Verde (A Receber) x Linha Vermelha (A Pagar) por Mês
     const elFluxo = document.getElementById('chartFluxoCaixa');
     if (elFluxo) {
         const ctxFluxo = elFluxo.getContext('2d');
         if (chartFluxo) chartFluxo.destroy();
+
+        const nomesMeses = ['Jan', 'Fev', 'Mar', 'Abr', 'Mai', 'Jun', 'Jul', 'Ago', 'Set', 'Out', 'Nov', 'Dez'];
+        const mapaMensal = {};
+
+        const extrairChaveMes = (dataStr) => {
+            if (!dataStr) return null;
+            const clean = String(dataStr).trim();
+            if (/^\d{4}-\d{2}/.test(clean)) return clean.slice(0, 7); // YYYY-MM
+            if (/^\d{2}\/\d{2}\/\d{4}/.test(clean)) {
+                const p = clean.split('/');
+                return `${p[2]}-${p[1]}`;
+            }
+            return null;
+        };
+
+        // Agrupa Contas a Receber por mês
+        receberList.forEach(item => {
+            const chave = extrairChaveMes(item.venc || item.vencimento);
+            if (!chave) return;
+            if (!mapaMensal[chave]) mapaMensal[chave] = { receber: 0, pagar: 0 };
+            mapaMensal[chave].receber += Number(item.valor || 0);
+        });
+
+        // Agrupa Contas a Pagar por mês
+        pagarList.forEach(item => {
+            const chave = extrairChaveMes(item.venc || item.vencimento);
+            if (!chave) return;
+            if (!mapaMensal[chave]) mapaMensal[chave] = { receber: 0, pagar: 0 };
+            mapaMensal[chave].pagar += Number(item.valor || 0);
+        });
+
+        let chavesOrdenadas = Object.keys(mapaMensal).sort();
+
+        // Garante ao menos uma janela de 6 meses no eixo X para a curva ficar visualmente fluida
+        if (chavesOrdenadas.length === 0) {
+            const hoje = new Date();
+            for (let i = 5; i >= 0; i--) {
+                const d = new Date(hoje.getFullYear(), hoje.getMonth() - i, 1);
+                const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                mapaMensal[k] = { receber: 0, pagar: 0 };
+            }
+            chavesOrdenadas = Object.keys(mapaMensal).sort();
+        } else if (chavesOrdenadas.length < 6) {
+            const [ultAno, ultMes] = chavesOrdenadas[chavesOrdenadas.length - 1].split('-').map(Number);
+            for (let i = 5; i >= 0; i--) {
+                const d = new Date(ultAno, (ultMes - 1) - i, 1);
+                const k = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+                if (!mapaMensal[k]) mapaMensal[k] = { receber: 0, pagar: 0 };
+            }
+            chavesOrdenadas = Object.keys(mapaMensal).sort();
+        }
+
+        const anosDistintos = new Set(chavesOrdenadas.map(k => k.split('-')[0]));
+        const labels = chavesOrdenadas.map(k => {
+            const [ano, mes] = k.split('-');
+            const nomeMes = nomesMeses[parseInt(mes, 10) - 1] || mes;
+            return anosDistintos.size > 1 ? `${nomeMes}/${ano.slice(2)}` : nomeMes;
+        });
+
+        const dadosReceber = chavesOrdenadas.map(k => mapaMensal[k].receber);
+        const dadosPagar = chavesOrdenadas.map(k => mapaMensal[k].pagar);
+
+        // Identifica o índice do mês atual (ou o último mês exibido) para a faixa vertical de destaque
+        const hoje = new Date();
+        const chaveAtual = `${hoje.getFullYear()}-${String(hoje.getMonth() + 1).padStart(2, '0')}`;
+        let indexDestaque = chavesOrdenadas.indexOf(chaveAtual);
+        if (indexDestaque === -1) indexDestaque = chavesOrdenadas.length - 1;
+
+        // Degradês suaves abaixo das linhas
+        const gradVerde = ctxFluxo.createLinearGradient(0, 0, 0, 310);
+        gradVerde.addColorStop(0, 'rgba(34, 197, 94, 0.28)');
+        gradVerde.addColorStop(1, 'rgba(34, 197, 94, 0.0)');
+
+        const gradVermelho = ctxFluxo.createLinearGradient(0, 0, 0, 310);
+        gradVermelho.addColorStop(0, 'rgba(239, 68, 68, 0.25)');
+        gradVermelho.addColorStop(1, 'rgba(239, 68, 68, 0.0)');
+
+        // Plugin para faixa vertical discreta no mês em destaque
+        const pluginDestaqueMes = {
+            id: 'destaqueMesAtual',
+            beforeDatasetsDraw(chart) {
+                const { ctx, chartArea, scales: { x } } = chart;
+                if (!chartArea || !x || indexDestaque < 0) return;
+
+                const xPos = x.getPixelForValue(indexDestaque);
+                const step = x.ticks.length > 1 
+                    ? Math.abs(x.getPixelForValue(1) - x.getPixelForValue(0)) 
+                    : 60;
+                const larguraColuna = Math.min(step * 0.65, 58);
+
+                ctx.save();
+                ctx.fillStyle = highlightBandColor;
+                ctx.fillRect(
+                    xPos - larguraColuna / 2,
+                    chartArea.top,
+                    larguraColuna,
+                    chartArea.bottom - chartArea.top
+                );
+                ctx.restore();
+            }
+        };
+
+        const formatarEixoY = (valor) => {
+            if (valor === 0) return 'R$ 0';
+            if (valor >= 1000000) return 'R$ ' + (valor / 1000000).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mi';
+            if (valor >= 1000) return 'R$ ' + (valor / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 }) + ' mil';
+            return 'R$ ' + valor.toLocaleString('pt-BR');
+        };
+
         chartFluxo = new Chart(ctxFluxo, {
-            type: 'bar',
+            type: 'line',
             data: {
-                labels: ['Entradas Realizadas', 'Saídas Realizadas'],
-                datasets: [{ 
-                    label: 'Valores em R$', 
-                    data: [realIn, realOut], 
-                    backgroundColor: ['#2ecc71', '#e74c3c'],
-                    borderRadius: 6
-                }]
+                labels: labels,
+                datasets: [
+                    {
+                        label: 'A Receber (Entradas)',
+                        data: dadosReceber,
+                        borderColor: '#22c55e',
+                        backgroundColor: gradVerde,
+                        borderWidth: 2.5,
+                        tension: 0.42,
+                        fill: true,
+                        pointRadius: (ctx) => ctx.dataIndex === indexDestaque ? 5 : 3,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#22c55e',
+                        pointBorderColor: isLight ? '#ffffff' : '#121212',
+                        pointBorderWidth: 1.5
+                    },
+                    {
+                        label: 'A Pagar (Saídas)',
+                        data: dadosPagar,
+                        borderColor: '#ef4444',
+                        backgroundColor: gradVermelho,
+                        borderWidth: 2.5,
+                        tension: 0.42,
+                        fill: true,
+                        pointRadius: (ctx) => ctx.dataIndex === indexDestaque ? 5 : 3,
+                        pointHoverRadius: 6,
+                        pointBackgroundColor: '#ef4444',
+                        pointBorderColor: isLight ? '#ffffff' : '#121212',
+                        pointBorderWidth: 1.5
+                    }
+                ]
             },
-            options: { 
+            options: {
                 responsive: true,
+                maintainAspectRatio: false,
+                interaction: {
+                    mode: 'index',
+                    intersect: false
+                },
                 plugins: {
-                    legend: { labels: { color: textColor } }
+                    legend: {
+                        align: 'start',
+                        labels: {
+                            color: textColor,
+                            usePointStyle: true,
+                            pointStyle: 'circle',
+                            boxWidth: 8,
+                            boxHeight: 8,
+                            padding: 20,
+                            font: { size: 12, weight: '600' }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: isLight ? '#1e293b' : '#18181b',
+                        titleColor: '#FFD500',
+                        bodyColor: '#f8fafc',
+                        borderColor: '#333333',
+                        borderWidth: 1,
+                        padding: 12,
+                        callbacks: {
+                            label: (context) => ` ${context.dataset.label}: ${fmt(context.parsed.y)}`
+                        }
+                    }
                 },
                 scales: {
-                    x: { ticks: { color: textColor }, grid: { color: gridColor } },
-                    y: { ticks: { color: textColor }, grid: { color: gridColor } }
+                    x: {
+                        grid: { display: false },
+                        border: { display: false },
+                        ticks: {
+                            color: (ctx) => ctx.index === indexDestaque ? (isLight ? '#111111' : '#ffffff') : textColor,
+                            font: (ctx) => ({
+                                size: 12,
+                                weight: ctx.index === indexDestaque ? 'bold' : 'normal'
+                            }),
+                            padding: 8
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        border: { display: false },
+                        grid: {
+                            color: gridColor,
+                            drawTicks: false
+                        },
+                        ticks: {
+                            color: textColor,
+                            font: { size: 11 },
+                            padding: 10,
+                            maxTicksLimit: 5,
+                            callback: (val) => formatarEixoY(val)
+                        }
+                    }
                 }
-            }
+            },
+            plugins: [pluginDestaqueMes]
         });
     }
 
@@ -694,8 +882,12 @@ function renderGraficos(realIn, realOut, catPessoal = 0, catAdmin = 0, catPecas 
             },
             options: { 
                 responsive: true,
+                maintainAspectRatio: false,
                 plugins: {
-                    legend: { labels: { color: textColor } }
+                    legend: { 
+                        position: 'bottom',
+                        labels: { color: textColor, usePointStyle: true, pointStyle: 'circle', padding: 15 } 
+                    }
                 }
             }
         });
