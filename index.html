@@ -149,35 +149,52 @@
                 </div>
             </div>
 
-            <div class="dashboard-grid">
-                <div class="panel">
-                    <div class="panel-header"><div class="panel-title"><i class="fas fa-chart-bar"></i> Fluxo de Caixa (Entradas x Saídas)</div></div>
-                    <canvas id="chartFluxoCaixa" height="120"></canvas>
+            <!-- GRÁFICO PRINCIPAL EM DESTAQUE (LARGURA TOTAL) -->
+            <div class="panel chart-main-panel">
+                <div class="panel-header" style="border-bottom: none; margin-bottom: 6px; padding-bottom: 0;">
+                    <div>
+                        <div class="panel-title" style="font-size: 18px; letter-spacing: 0.3px;">
+                            <i class="fas fa-chart-line" style="color: var(--accent-color); margin-right: 6px;"></i>
+                            FLUXO MENSAL: A RECEBER X A PAGAR
+                        </div>
+                        <p style="font-size: 12px; color: var(--text-muted); margin-top: 4px;">
+                            Evolução comparativa mensal de receitas e despesas (eixo X: meses | eixo Y: valores em R$)
+                        </p>
+                    </div>
                 </div>
-                <div class="panel">
-                    <div class="panel-header"><div class="panel-title"><i class="fas fa-chart-pie"></i> Despesas por Categoria</div></div>
-                    <canvas id="chartCategorias" height="120"></canvas>
+                <div class="chart-main-wrapper">
+                    <canvas id="chartFluxoCaixa"></canvas>
                 </div>
             </div>
 
-            <div class="panel">
-                <div class="panel-header">
-                    <div class="panel-title"><i class="fas fa-exclamation-circle" style="color: var(--warning-color);"></i> Próximos Vencimentos</div>
+            <!-- PAINÉIS SECUNDÁRIOS LADO A LADO -->
+            <div class="dashboard-grid">
+                <div class="panel">
+                    <div class="panel-header"><div class="panel-title"><i class="fas fa-chart-pie"></i> Despesas por Categoria</div></div>
+                    <div style="position: relative; height: 260px; width: 100%; display: flex; justify-content: center;">
+                        <canvas id="chartCategorias"></canvas>
+                    </div>
                 </div>
-                <div class="table-responsive">
-                    <table>
-                        <thead>
-                            <tr>
-                                <th>Vencimento</th>
-                                <th>Tipo</th>
-                                <th>Pessoa / Empresa</th>
-                                <th>Valor</th>
-                                <th>Status</th>
-                                <th>Ação</th>
-                            </tr>
-                        </thead>
-                        <tbody id="tbProximosVencimentos"></tbody>
-                    </table>
+
+                <div class="panel">
+                    <div class="panel-header">
+                        <div class="panel-title"><i class="fas fa-exclamation-circle" style="color: var(--warning-color);"></i> Próximos Vencimentos</div>
+                    </div>
+                    <div class="table-responsive">
+                        <table>
+                            <thead>
+                                <tr>
+                                    <th>Vencimento</th>
+                                    <th>Tipo</th>
+                                    <th>Pessoa / Empresa</th>
+                                    <th>Valor</th>
+                                    <th>Status</th>
+                                    <th>Ação</th>
+                                </tr>
+                            </thead>
+                            <tbody id="tbProximosVencimentos"></tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
